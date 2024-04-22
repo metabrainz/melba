@@ -18,15 +18,13 @@ impl Poller {
             pool
         }
     }
-    pub fn poll(&self) {
-        tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(self.poll_interval));
-            loop {
-                interval.tick().await;
-                if let Err(e) = looper::poll_db(&self.pool).await {
-                    eprintln!("Error polling database: {}", e)
-                }
+    pub async fn poll(&self) {
+        let mut interval = interval(Duration::from_secs(self.poll_interval));
+        loop {
+            interval.tick().await;
+            if let Err(e) = looper::poll_db(&self.pool).await {
+                eprintln!("Error polling database: {}", e)
             }
-        });
+        }
     }
 }

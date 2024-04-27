@@ -1,4 +1,5 @@
 mod looper;
+mod utils;
 
 use std::time::Duration;
 use sqlx::Row;

@@ -3,18 +3,21 @@ use sqlx::{Error};
 use crate::poller::utils::{extract_url_from_edit_data, extract_urls_from_edit_note};
 
 pub async fn poll_db(
-    pool: &sqlx::PgPool
+    pool: &sqlx::PgPool,
+    edit_data_start_idx: i32,
+    edit_note_start_idx: i32
 ) -> Result<(), Error> {
+    println!("EditNote: {}, EditData: {}", edit_note_start_idx, edit_data_start_idx);
     let edits = sqlx::query_as::<_, EditData>(
-        "SELECT * FROM edit_data LIMIT 10")
+        r#"SELECT * FROM edit_data WHERE "edit" > $1 ORDER BY edit LIMIT 10"#)
+        .bind(edit_data_start_idx)
         .fetch_all(pool)
         .await?;
-
     let notes = sqlx::query_as::<_, EditNote>(
-        "SELECT * FROM edit_note LIMIT 10")
+        r#"SELECT * FROM edit_note WHERE "id" > $1 ORDER BY id LIMIT 10"#)
+        .bind(edit_note_start_idx)
         .fetch_all(pool)
         .await?;
-
     //TODO: transformations, and save transformed data to internet_archive_urls
     println!("Edits ->");
     for edit in edits {

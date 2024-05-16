@@ -14,9 +14,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .unwrap();
 
-    let poller = Poller::new(POLL_INTERVAL, pool);
+    let mut poller = Poller::new(POLL_INTERVAL, pool);
     tokio::spawn(async move {
         poller
+            .await
             .poll()
             .await;
     }).await.unwrap();

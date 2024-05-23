@@ -1,7 +1,6 @@
 use linkify::{LinkFinder, LinkKind};
-use mb_rs::schema::EditData;
 use serde_json::json;
-use sqlx::Error;
+use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
 use crate::poller::internet_archive_urls::InternetArchiveUrls;
 
@@ -32,12 +31,16 @@ pub fn extract_url_from_edit_data(json: JsonValue) -> Option<String> {
             return None;
         }
         let entity0 = json.get("entity1").unwrap();
-        Some(entity0.get("name").unwrap().to_string())
+        let mut url = entity0.get("name").unwrap().to_string();
+        url = url.replace("\"", "").replace(" ", "");
+        Some(url)
     } else if json.get("new").is_some() && json.get("new").unwrap().is_object() {
         //Edit type: Edit URL
         let new = json.get("new").unwrap();
         return if new.get("url").is_some() && new.get("url") != Some(&json!(null)) {
-            Some(new.get("url").unwrap().to_string())
+            let mut url = new.get("url").unwrap().to_string();
+            url = url.replace("\"", "").replace(" ", "");
+            Some(url)
         } else { None }
     } else {
         None
@@ -47,7 +50,7 @@ pub fn extract_url_from_edit_data(json: JsonValue) -> Option<String> {
 //TODO: Handle the cases: 1. Can we/should we retrieve latest rows faster?  2. Handle case when the internet_archive_urls table is empty
 ///This function fetches the latest row from internet_archive_urls_table
 pub async fn extract_last_row_from_internet_archive_table(
-    pool: &sqlx::PgPool
+    pool: &PgPool
 ) -> Vec<InternetArchiveUrls> {
     let last_row = sqlx::query_as::<_, InternetArchiveUrls>(
         "
@@ -61,4 +64,26 @@ pub async fn extract_last_row_from_internet_archive_table(
         .fetch_all(pool)
         .await;
    return last_row.unwrap()
+}
+
+///This function checks if we are inserting the same url within a day into the internet_archive_urls table
+pub async fn should_insert_url_to_internet_archive_urls(
+    url: &str,
+    pool: &PgPool
+) -> Result<bool, Error> {
+    let res: Option<(bool, )> = sqlx::query_as(
+        r#"
+        SELECT (CURRENT_TIMESTAMP - created_at) > INTERVAL '1 DAY' AS daydiff
+        FROM internet_archive_urls
+        WHERE url = $1
+        "#)
+        .bind(url)
+        .fetch_optional(pool)
+        .await?;
+    if res.is_some() {
+        let bool_val = res.unwrap().0;
+        return Ok(bool_val);
+    } else {
+        Ok(true)
+    }
 }

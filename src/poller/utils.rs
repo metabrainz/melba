@@ -1,4 +1,5 @@
 use linkify::{LinkFinder, LinkKind};
+use mb_rs::schema::{EditData, EditNote};
 use serde_json::json;
 use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
@@ -47,11 +48,11 @@ pub fn extract_url_from_edit_data(json: JsonValue) -> Option<String> {
     }
 }
 
-//TODO: Handle the cases: 1. Can we/should we retrieve latest rows faster?  2. Handle case when the internet_archive_urls table is empty
+//TODO: Handle: 1. Can we/should we retrieve latest rows faster?
 ///This function fetches the latest row from internet_archive_urls_table
-pub async fn extract_last_row_from_internet_archive_table(
+pub async fn extract_last_rows_idx_from_internet_archive_table(
     pool: &PgPool
-) -> Vec<InternetArchiveUrls> {
+) -> Vec<i32> {
     let last_row = sqlx::query_as::<_, InternetArchiveUrls>(
         "
         SELECT DISTINCT ON (from_table)
@@ -63,8 +64,56 @@ pub async fn extract_last_row_from_internet_archive_table(
     )
         .fetch_all(pool)
         .await;
-   return last_row.unwrap()
+    return match last_row {
+        Ok(res) => {
+            return vec![res[0].id, res[1].id]
+        },
+        Err(_e) => initialise_internet_archive_table(pool).await
+    }
 }
+
+//TODO: Make the following logic better!
+///This function should run when there is no internet_archive_urls table or the table is not populated
+pub async fn initialise_internet_archive_table(
+    pool: &PgPool,
+) -> Vec<i32> {
+    let create_internet_archive_urls_table = "
+        create table if not exists internet_archive_urls(
+        id serial,
+        url text,
+        job_id text, -- response returned when we make the URL save request
+        from_table varchar, -- table from where URL is taken
+        from_table_id integer, -- id of the row from where the URL is taken
+        created_at timestamp with time zone default now(),
+        retry_count integer, -- keeps track of number of retries made for the URL
+        is_saved boolean);
+        ";
+    sqlx::query(create_internet_archive_urls_table)
+        .execute(pool)
+        .await
+        .unwrap();
+    let  select_latest_edit_data_row = "
+         SELECT DISTINCT ON (edit)
+         *
+         FROM edit_data
+         ORDER BY edit  DESC limit 1";
+    let latest_edit_data_row = sqlx::query_as::<_,EditData>(select_latest_edit_data_row)
+        .fetch_one(pool)
+        .await;
+    let select_latest_edit_note_row = "
+         SELECT DISTINCT ON (id)
+         *
+         FROM edit_note
+         ORDER BY id  DESC limit 1";
+    let latest_edit_note_row = sqlx::query_as::<_, EditNote>(select_latest_edit_note_row)
+        .fetch_one(pool)
+        .await;
+    let latest_edit_note = latest_edit_note_row.unwrap().id;
+    let latest_edit = latest_edit_data_row.unwrap().edit;
+    //0th-> Edit Data, 1st -> Edit Note
+    return vec![latest_edit, latest_edit_note]
+}
+
 
 ///This function checks if we are inserting the same url within a day into the internet_archive_urls table
 pub async fn should_insert_url_to_internet_archive_urls(

@@ -1,7 +1,10 @@
+use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
+use tokio::join;
 use crate::poller::Poller;
 
 mod poller;
+mod archival;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,13 +16,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&db_url)
         .await
         .unwrap();
-
-    let mut poller = Poller::new(POLL_INTERVAL, pool);
-    tokio::spawn(async move {
+    let notifier_pool = pool.clone();
+    let listener_pool = pool.clone();
+    let mut poller = Poller::new(POLL_INTERVAL, pool.clone());
+    let poll_task_handler =
+        tokio::spawn(async move {
         poller
             .await
             .poll()
             .await;
-    }).await.unwrap();
+    });
+
+    let notify_task_handler =
+        tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        while !notifier_pool.is_closed() {
+            interval.tick().await;
+            archival::notifier::notify(&notifier_pool)
+                .await;
+        }
+    });
+    let listener_task_handler =
+        tokio::spawn(async move {
+        archival::listener::listen( listener_pool)
+            .await
+            .unwrap();
+    });
+    join!(poll_task_handler,notify_task_handler,listener_task_handler);
     Ok(())
 }

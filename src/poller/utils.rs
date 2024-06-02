@@ -66,7 +66,7 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
         .await;
     return match last_row {
         Ok(res) => {
-            return vec![res[0].id, res[1].id]
+            return vec![res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap()]
         },
         Err(_e) => initialise_internet_archive_table(pool).await
     }

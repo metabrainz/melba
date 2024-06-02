@@ -1,14 +1,10 @@
-FROM rust as builder
+FROM rust:latest
 
-COPY . /app
+WORKDIR /usr/src/mb-exurl-ia-service
 
-WORKDIR /app
+COPY . .
 
-RUN cargo build --release
+RUN cargo install --path .
 
-FROM gcr.io/distroless/cc-debian11
+CMD ["mb-exurl-ia-service"]
 
-COPY --from=builder /app/target/release/mb-exurl-ia-service /app/mb-exurl-ia-service
-WORKDIR /app
-
-CMD ["./mb-exurl-ia-service"]

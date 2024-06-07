@@ -1,19 +1,32 @@
 use sqlx::PgPool;
+use crate::archival::utils;
 
-pub async fn notify(pool: &PgPool){
-    let res = sqlx::query(
-        r#"
-        DO $$
-        DECLARE
-            rec RECORD;
-        BEGIN
-            FOR rec IN SELECT * FROM internet_archive_urls
-            LOOP
-                PERFORM pg_notify('archive_urls', row_to_json(rec)::text);
-            END LOOP;
-        END $$;"#
-    ).execute(pool)
-        .await;
-    println!("[from notify]: {res:?}");
+
+pub struct Notifier {
+    start_notifier_from: i32,
+    pool: PgPool
+}
+
+impl Notifier {
+    pub async fn new(
+        pool: PgPool
+    ) -> Notifier {
+        let last_unarchived_row_from_internet_archive_urls_table =
+            utils::get_last_unarchived_row_from_internet_archive_urls_table(pool.clone()).await;
+        utils::init_notify_archive_urls_postgres_function(&pool).await;
+        return Notifier {
+            start_notifier_from: last_unarchived_row_from_internet_archive_urls_table,
+            pool
+        }
+    }
+    pub async fn notify(&mut self) {
+        let pool = self.pool.clone();
+        let res = sqlx::query("SELECT notify_archive_urls($1)")
+            .bind(3)
+            .execute(&pool)
+            .await;
+        self.start_notifier_from = self.start_notifier_from + 2;
+        println!("[from notify]: {res:?}")
+    }
 }
 

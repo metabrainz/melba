@@ -1,6 +1,5 @@
 mod looper;
 mod utils;
-mod internet_archive_urls;
 
 use std::time::Duration;
 use sqlx::Row;

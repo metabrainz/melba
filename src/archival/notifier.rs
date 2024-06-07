@@ -22,7 +22,7 @@ impl Notifier {
     pub async fn notify(&mut self) {
         let pool = self.pool.clone();
         let res = sqlx::query("SELECT notify_archive_urls($1)")
-            .bind(3)
+            .bind(self.start_notifier_from)
             .execute(&pool)
             .await;
         self.start_notifier_from = self.start_notifier_from + 2;

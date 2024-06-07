@@ -28,11 +28,29 @@ pub async fn init_notify_archive_urls_postgres_function(
     BEGIN
         FOR rec IN SELECT * FROM internet_archive_urls WHERE id > start_id ORDER BY id LIMIT 2
         LOOP
-            PERFORM pg_notify('archive_urls', json_build_object('url', rec.url, 'retry_count', rec.retry_count)::text);
+            PERFORM pg_notify('archive_urls', row_to_json(rec)::text);
         END LOOP;
     END;
     $$ LANGUAGE plpgsql";
     sqlx::query(query)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+pub async fn update_internet_archive_urls(
+    pool: &PgPool,
+    job_id: String,
+    id: i32
+) {
+    let query = r#"UPDATE internet_archive_urls SET
+     is_saved = true,
+     job_id = $1
+     WHERE id = $2
+     "#;
+    sqlx::query(query)
+        .bind(job_id)
+        .bind(id)
         .execute(pool)
         .await
         .unwrap();

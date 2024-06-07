@@ -339,6 +339,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-targets 0.52.5",
 ]
@@ -1124,9 +1125,11 @@ dependencies = [
 name = "mb-exurl-ia-service"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "linkify",
  "mb-rs",
  "reqwest",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",

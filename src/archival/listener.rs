@@ -7,7 +7,7 @@ pub async fn listen(pool: PgPool) -> Result<(), Error> {
     listener.listen("archive_urls").await.unwrap();
     loop {
         let notification = listener.recv().await.unwrap();
-        println!("{}", notification.payload());
-        //TODO:archive here
+        println!("Notification Payload: {}", notification.payload());
+
     }
 }

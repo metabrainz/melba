@@ -3,7 +3,7 @@ use mb_rs::schema::{EditData, EditNote};
 use serde_json::json;
 use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
-use crate::poller::internet_archive_urls::InternetArchiveUrls;
+use crate::structs::internet_archive_urls::InternetArchiveUrls;
 
 /// This function takes text from edit note and outputs a vector of URLs as string
 pub fn extract_urls_from_edit_note(note: &str) -> Vec<String> {

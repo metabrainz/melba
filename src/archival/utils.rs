@@ -26,7 +26,7 @@ pub async fn init_notify_archive_urls_postgres_function(
     DECLARE
         rec RECORD;
     BEGIN
-        FOR rec IN SELECT * FROM internet_archive_urls WHERE id > start_id ORDER BY id LIMIT 2
+        FOR rec IN SELECT * FROM internet_archive_urls WHERE id >= start_id ORDER BY id LIMIT 2
         LOOP
             PERFORM pg_notify('archive_urls', row_to_json(rec)::text);
         END LOOP;

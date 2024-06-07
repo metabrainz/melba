@@ -26,7 +26,8 @@ impl Notifier {
             .execute(&pool)
             .await;
         self.start_notifier_from = self.start_notifier_from + 2;
-        println!("[from notify]: {res:?}")
+        println!("[from notify]: {res:?}");
+        println!("[start_id], {}", self.start_notifier_from)
     }
 }
 

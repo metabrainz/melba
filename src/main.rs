@@ -25,12 +25,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let notifier_pool = pool.clone();
     let listener_pool = pool.clone();
 
-    let mut poller = Poller::new(POLL_INTERVAL, pool.clone());
+    let mut poller = Poller::new(POLL_INTERVAL, pool.clone()).await;
     let notifier = Arc::new(Mutex::new(Notifier::new(pool.clone()).await));
     let poll_task_handler =
         tokio::spawn(async move {
             poller
-                .await
                 .poll()
                 .await;
         });

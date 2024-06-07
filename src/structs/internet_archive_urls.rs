@@ -3,8 +3,9 @@
 // https://github.com/jayy-lmao/sql-gen
 //TODO: move this to mb-rs
 use sqlx::types::chrono;
+use serde::{Deserialize};
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(sqlx::FromRow, Debug, Deserialize)]
 pub struct InternetArchiveUrls {
     pub id: i32,
     pub url: Option<String>,

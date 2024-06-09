@@ -38,10 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(5));
             while !notifier_pool.is_closed() {
+                interval.tick().await;
                 let notifier = Arc::clone(&notifier);
                 let mut notifier_lock = notifier.lock();
                 notifier_lock.await.notify().await;
-                interval.tick().await;
             }
         });
 

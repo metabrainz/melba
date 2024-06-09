@@ -1,5 +1,4 @@
 use linkify::{LinkFinder, LinkKind};
-use mb_rs::schema::{EditData, EditNote};
 use serde_json::json;
 use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
@@ -66,6 +65,9 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
         .await;
     return match last_row {
         Ok(res) => {
+            if res.is_empty(){
+                return initialise_internet_archive_table(pool).await
+            }
             return vec![res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap()]
         },
         Err(_e) => initialise_internet_archive_table(pool).await
@@ -77,6 +79,40 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
 pub async fn initialise_internet_archive_table(
     pool: &PgPool,
 ) -> Vec<i32> {
+    create_internet_archive_urls_table(pool).await;
+    //TODO: uncomment it later and replace the hardcoded ids with fetched ones, and also insert them to internet_archive_urls table
+
+    // let  select_latest_edit_data_row = "
+    //      SELECT DISTINCT ON (edit)
+    //      *
+    //      FROM edit_data
+    //      ORDER BY edit  DESC limit 1";
+    //
+    // let latest_edit_data_row = sqlx::query_as::<_,EditData>(select_latest_edit_data_row)
+    //     .fetch_one(pool)
+    //     .await;
+    //
+    // let select_latest_edit_note_row = "
+    //      SELECT DISTINCT ON (id)
+    //      *
+    //      FROM edit_note
+    //      ORDER BY id  DESC limit 1";
+    //
+    // let latest_edit_note_row = sqlx::query_as::<_, EditNote>(select_latest_edit_note_row)
+    //     .fetch_one(pool)
+    //     .await;
+    // let latest_edit_note = latest_edit_note_row.unwrap().id;
+    // let latest_edit = latest_edit_data_row.unwrap().edit;
+    // println!("{}, note: {}", latest_edit, latest_edit_note);
+    //0th-> Edit Data, 1st -> Edit Note
+    return vec![48470658, 70000000]
+}
+
+///Initiate internet_archive_urls table
+/// For development, adding 2 rows initially for the sake of demonstration TODO: Remove the two inserts
+async fn create_internet_archive_urls_table(
+    pool: &PgPool
+) {
     let create_internet_archive_urls_table = "
         create table if not exists internet_archive_urls(
         id serial,
@@ -92,28 +128,25 @@ pub async fn initialise_internet_archive_table(
         .execute(pool)
         .await
         .unwrap();
-    let  select_latest_edit_data_row = "
-         SELECT DISTINCT ON (edit)
-         *
-         FROM edit_data
-         ORDER BY edit  DESC limit 1";
-    let latest_edit_data_row = sqlx::query_as::<_,EditData>(select_latest_edit_data_row)
-        .fetch_one(pool)
-        .await;
-    let select_latest_edit_note_row = "
-         SELECT DISTINCT ON (id)
-         *
-         FROM edit_note
-         ORDER BY id  DESC limit 1";
-    let latest_edit_note_row = sqlx::query_as::<_, EditNote>(select_latest_edit_note_row)
-        .fetch_one(pool)
-        .await;
-    let latest_edit_note = latest_edit_note_row.unwrap().id;
-    let latest_edit = latest_edit_data_row.unwrap().edit;
-    //0th-> Edit Data, 1st -> Edit Note
-    return vec![latest_edit, latest_edit_note]
-}
 
+    let sample_edit_note_row = "INSERT INTO internet_archive_urls
+    (url, from_table, from_table_id, retry_count, is_saved) VALUES
+    ('https://blackpaintingsdiscography.bandcamp.com/album/asmodea', 'edit_note', 70000000, 0, false);";
+
+    let sample_edit_data_row = "INSERT INTO internet_archive_urls
+    (url, from_table, from_table_id, retry_count, is_saved) VALUES
+    ('http://rut-hc.bandcamp.com/album/demo', 'edit_data', 48470658 , 0, false);";
+
+    sqlx::query(sample_edit_data_row)
+        .execute(pool)
+        .await
+        .unwrap();
+
+    sqlx::query(sample_edit_note_row)
+        .execute(pool)
+        .await
+        .unwrap();
+}
 
 ///This function checks if we are inserting the same url within a day into the internet_archive_urls table
 pub async fn should_insert_url_to_internet_archive_urls(

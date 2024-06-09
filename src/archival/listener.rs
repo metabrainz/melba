@@ -8,10 +8,11 @@ pub async fn listen(pool: PgPool) -> Result<(), Error> {
     let mut listener = PgListener::connect_with(&pool).await?;
     listener.listen("archive_urls").await.unwrap();
     loop {
-        let notification = listener.recv().await.unwrap();
-        println!("Notification Payload: {}", notification.payload());
-        let payload: InternetArchiveUrls = serde_json::from_str(notification.payload()).unwrap();
-        archive(payload.id, payload.url.unwrap(), payload.retry_count.unwrap(), &pool).await;
+        while let Some(notification) = listener.try_recv().await? {
+            println!("Notification Payload: {}", notification.payload());
+            let payload: InternetArchiveUrls = serde_json::from_str(notification.payload()).unwrap();
+            archive(payload.id, payload.url.unwrap(), payload.retry_count.unwrap(), &pool).await;
+        }
     }
 }
 

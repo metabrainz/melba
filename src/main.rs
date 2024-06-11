@@ -15,7 +15,7 @@ mod structs;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     const POLL_INTERVAL: u64 = 10;
     //TODO: How to manage prod DB and dev DB?
-    let db_url = "postgres://musicbrainz:musicbrainz@172.18.0.5:5432/musicbrainz_db";
+    let db_url = "postgres://musicbrainz:musicbrainz@musicbrainz-docker-db-1:5432/musicbrainz_db";
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&db_url)

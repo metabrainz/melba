@@ -42,3 +42,21 @@
         └── mod.rs
 
 ```
+
+### Local setup
+> - Make sure musicbrainz db and the required database tables are present.
+> - Follow https://github.com/metabrainz/musicbrainz-docker to install the required containers and db dumps.
+1. Build the project and run.
+    - Make sure rust is installed.
+   - ```shell
+        cargo build &&
+        ./target/debug/mb-exurl-ia-service
+        ```
+2. Use the Dockerfile
+   - Note that the container has to run in the same network as musicbrainz db network bridge.
+   - ```shell
+     docker buildx build -t mb-exurl-ia-service:latest .
+     ```
+   - ```shell
+     docker run --network musicbrainz-docker_default -it mb-exurl-ia-service:latest
+     ```

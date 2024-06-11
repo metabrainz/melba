@@ -15,4 +15,3 @@ linkify = "0.10.0"
 mb-rs = {git = "https://github.com/yellowHatpro/Rust-Playground.git"}
 serde = { version = "1.0.198", features = ["derive"] }
 chrono = { version = "0.4.38" , features = ["serde"] }
-

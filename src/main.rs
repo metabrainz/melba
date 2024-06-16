@@ -1,5 +1,4 @@
 use std::env;
-use std::ops::Deref;
 use std::sync::{Arc};
 use std::time::Duration;
 use dotenv::dotenv;
@@ -47,9 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             while !notifier_pool.is_closed() {
                 interval.tick().await;
                 let notifier = Arc::clone(&notifier);
-                let mut notifier_lock = notifier.lock();
-                notifier_lock.await.notify().await;
-            }
+                notifier.lock().await.notify().await;
+            };
         });
 
     let listener_task_handler =
@@ -58,6 +56,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await
                 .unwrap();
         });
-    join!(poll_task_handler,notify_task_handler,listener_task_handler);
+    let (poll_result, notify_result, listener_result) =
+        join!(poll_task_handler,notify_task_handler,listener_task_handler);
+
+    if let Err(e) = poll_result {
+        eprintln!("Polling task failed: {:?}", e);
+    }
+    if let Err(e) = notify_result {
+        eprintln!("Notification task failed: {:?}", e);
+    }
+    if let Err(e) = listener_result {
+        eprintln!("Listener task failed: {:?}", e);
+    }
+
     Ok(())
 }

@@ -18,8 +18,8 @@ pub async fn listen(pool: PgPool) -> Result<(), Error> {
 
 pub async fn archive(
     id: i32,
-    url: String,
-    retry_count: i32,
+    _url: String,
+    _retry_count: i32,
     pool: &PgPool
 ) {
     //TODO: make a reqwest here

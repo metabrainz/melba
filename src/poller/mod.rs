@@ -2,7 +2,6 @@ mod looper;
 mod utils;
 
 use std::time::Duration;
-use sqlx::Row;
 use tokio::time::interval;
 use crate::poller::utils::extract_last_rows_idx_from_internet_archive_table;
 

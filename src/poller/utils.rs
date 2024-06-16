@@ -9,7 +9,7 @@ pub fn extract_urls_from_edit_note(note: &str) -> Vec<String> {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
 
-    let mut urls: Vec<_> = finder
+    let urls: Vec<_> = finder
         .links(note)
         .map(|link|{link.as_str().to_string()})
         .collect();
@@ -138,6 +138,9 @@ pub async fn should_insert_url_to_internet_archive_urls(
     url: &str,
     pool: &PgPool
 ) -> Result<bool, Error> {
+    if should_exclude_url(url) == true {
+        return Ok(false)
+    }
     let res: Option<(bool, )> = sqlx::query_as(
         r#"
         SELECT (CURRENT_TIMESTAMP - created_at) > INTERVAL '1 DAY' AS daydiff

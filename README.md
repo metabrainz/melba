@@ -26,6 +26,14 @@
 ├── Cargo.toml // dependencies
 ├── Dockerfile 
 ├── README.md
+├── scripts //Helpful scripts for development
+│   ├── init_db.sh //initialises the external_url_archiver schema
+│   ├── reinit_db.sh //Drops the external_url_archiver schema and reinitializes it
+│   └── sql //Import sql scripts
+│       ├── 001_CreateSchema.sql
+│       ├── 002_CreateTable.sql
+│       ├── 003_CreateFunction.sql
+│       └── 004_CreateTrigger.sql
 └── src
     ├── archival // Contains code for archive task
     │   ├── listener.rs // Contains functions related to listening the channel, and saving the URLs in Wayback Machine
@@ -46,6 +54,10 @@
 ### Local setup
 > - Make sure musicbrainz db and the required database tables are present.
 > - Follow https://github.com/metabrainz/musicbrainz-docker to install the required containers and db dumps.
+> - Rename the `.env.example` to `.env`.
+> - After ensuring musicbrainz_db is running on port 5432, Run the script `init_db.sh` in scripts dir.
+
+There are 2 methods to run the program:
 1. Build the project and run.
     - Make sure rust is installed.
    - ```shell

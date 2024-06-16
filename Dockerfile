@@ -4,6 +4,9 @@ WORKDIR /app
 
 COPY . .
 
+ARG PGHOST
+ENV PGHOST=${PGHOST}
+
 ENV RUSTFLAGS='-C target-feature=+crt-static'
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
@@ -16,6 +19,8 @@ FROM scratch
 WORKDIR /app
 
 COPY --from=builder /mb-exurl-ia-service ./app
+
+ENV PGHOST=${PGHOST}
 
 CMD ["/app/app"]
 

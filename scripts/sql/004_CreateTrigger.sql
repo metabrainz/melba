@@ -3,10 +3,22 @@ RETURNS TRIGGER AS $$
     DECLARE
         url_value TEXT;
     BEGIN
+    --  Edit Type: Add Relationship (type1 is URL)
         IF NEW.data ? 'type1' AND NEW.data->>'type1' = 'url' THEN
             IF NEW.data ? 'entity1' THEN
                 url_value := NEW.data->'entity1'->>'name';
             END IF;
+
+    --  Edit Type: Add Relationship (type0 is URL)
+        ELSIF NEW.data ? 'type0' AND NEW.data->>'type0' = 'url' THEN
+            IF NEW.data ? 'entity0' THEN
+                url_value := NEW.data->'entity0'->>'name';
+            END IF;
+
+    -- Edit Type: Edit URL TODO: what fields to save though?
+        ELSIF NEW.data ? 'new' AND NEW.data->'new' ? 'url' THEN
+            url_value := NEW.data->'new'->>'url';
+
         END IF;
 
         IF url_value IS NOT NULL THEN

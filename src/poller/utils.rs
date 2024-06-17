@@ -23,7 +23,7 @@ pub fn should_exclude_url(url: &str) -> bool {
 
 //TODO: Handle: 1. Can we/should we retrieve latest rows faster?
 ///This function fetches the latest row from internet_archive_urls_table
-pub async fn extract_last_rows_idx_from_internet_archive_table(
+pub async fn extract_last_row_idx_from_internet_archive_table(
     pool: &PgPool
 ) -> i32 {
     let last_row = sqlx::query_as::<_, InternetArchiveUrls>(
@@ -34,8 +34,7 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
         WHERE from_table = 'edit_note'
         ORDER BY from_table, from_table_id DESC;
         "
-    )
-        .fetch_one(pool)
+    ).fetch_one(pool)
         .await;
     return match last_row {
         Ok(res) => {
@@ -45,13 +44,13 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
     }
 }
 
-//TODO: Make the following logic better!
 ///This function should run when there is no internet_archive_urls table or the table is not populated
 pub async fn initialise_internet_archive_table(
     pool: &PgPool,
 ) -> i32 {
     create_internet_archive_urls_table(pool).await;
-    //TODO: uncomment it later and replace the hardcoded ids with fetched ones, and also insert them to internet_archive_urls table
+    //TODO: uncomment it later and replace the hardcoded ids with fetched ones,
+    // and also insert them to internet_archive_urls table
 
     // let select_latest_edit_note_row = "
     //      SELECT DISTINCT ON (id)
@@ -89,7 +88,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
     url: &str,
     pool: &PgPool
 ) -> Result<bool, Error> {
-    if should_exclude_url(url) == true {
+    if should_exclude_url(url) {
         return Ok(false)
     }
     let res: Option<(bool, )> = sqlx::query_as(

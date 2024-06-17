@@ -3,11 +3,20 @@
 - [Proposal Doc Link](https://docs.google.com/document/d/1Bk66_HFWEA6gBbFfQzIriGGgxxbEIwN1CbVDcz7FTys/edit?usp=sharing)
 
 ### Current Implementation (WIP)
+
+We want to get URLs from `edit_data` and `edit_note` tables, and archive them in Internet Archive history.
+
+We create a `external_url_archiver` schema, under which we create the required table, functions, trigger to make the service work.
+
+To get URLs from `edit_data` table, we use triggers.
+To get URLs from `edit_note` table, we use polling.
+
+Following are the long-running tasks:
+
 1. `poller task`
    - Create a `Poller` implementation which:
-     - initialises the `internet_archive_urls` table, where we will store the URLs.
-     - Fetches the `edit_note` id and `edit_data` edit column ids from `internet_archive_urls` , from where the polling will start.
-   - Poll `edit_data` and `edit_note` for URLs
+     - Gets the last `edit_note` id from `internet_archive_urls` table. We start polling the `edit_note` table from this id.
+   - Poll `edit_note` table for URLs
    - Transformations to required format
    - Save output to `internet_archive_urls` table
 2. `archival task`

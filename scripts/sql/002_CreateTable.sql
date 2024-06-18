@@ -8,3 +8,9 @@ CREATE TABLE external_url_archiver.internet_archive_urls (
         retry_count         INTEGER, -- keeps track of number of retries made for the URL
         is_saved            boolean
 );
+
+CREATE TABLE external_url_archiver.log_edit_note_data_rows (
+    id SERIAL PRIMARY KEY,
+    from_table TEXT NOT NULL,
+    from_table_id INTEGER NOT NULL,
+);

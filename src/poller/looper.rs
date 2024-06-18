@@ -1,6 +1,6 @@
 use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool};
-use crate::poller::utils::{extract_url_from_edit_data, extract_urls_from_edit_note, should_insert_url_to_internet_archive_urls};
+use crate::poller::utils::{extract_url_from_edit_data, extract_urls_from_text, should_insert_url_to_internet_archive_urls};
 
 pub async fn poll_db(
     pool: &PgPool,
@@ -21,16 +21,20 @@ pub async fn poll_db(
     //TODO: transformations, and save transformed data to internet_archive_urls
     println!("Edits ->");
     for edit in edits {
-        let extracted_data = extract_url_from_edit_data(edit.data);
-        if extracted_data.is_some() {
-            let url = extracted_data.unwrap();
-            save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool).await;
+        let urls = extract_url_from_edit_data(edit.data);
+        for url in urls {
+            save_url_to_internet_archive_urls(
+                url.as_str(),
+                "edit_data",
+                edit.edit,
+                pool
+            ).await;
             println!("{}", url);
         }
     }
     println!("Edit Notes ->");
     for note in notes {
-        let urls = extract_urls_from_edit_note(note.text.as_str());
+        let urls = extract_urls_from_text(note.text.as_str());
         for url in urls {
             save_url_to_internet_archive_urls(
                 url.as_str(),
@@ -38,6 +42,7 @@ pub async fn poll_db(
                 note.id,
                 pool
             ).await;
+            println!("{}", url);
         }
     }
     Ok(())

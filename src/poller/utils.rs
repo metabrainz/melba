@@ -4,13 +4,13 @@ use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
 
-/// This function takes text from edit note and outputs a vector of URLs as string
-pub fn extract_urls_from_edit_note(note: &str) -> Vec<String> {
+/// This function takes text and outputs a vector of URLs as string
+pub fn extract_urls_from_text(text: &str) -> Vec<String> {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
 
     let urls: Vec<_> = finder
-        .links(note)
+        .links(text)
         .map(|link|{link.as_str().to_string()})
         .collect();
     urls
@@ -24,27 +24,82 @@ pub fn should_exclude_url(url: &str) -> bool {
 }
 
 /// This function takes input Edit Data in form of JSONValue, checks if the Edit Data contains URL, and returns the URL as String
-pub fn extract_url_from_edit_data(json: JsonValue) -> Option<String> {
-    return if json.get("type1") == Some(&json!("url")) {
-        // Edit type: Add Relationship
-        if json.get("entity1").is_none() {
-            return None;
-        }
-        let entity0 = json.get("entity1").unwrap();
-        let mut url = entity0.get("name").unwrap().to_string();
-        url = url.replace("\"", "").replace(" ", "");
-        Some(url)
-    } else if json.get("new").is_some() && json.get("new").unwrap().is_object() {
-        //Edit type: Edit URL
-        let new = json.get("new").unwrap();
-        return if new.get("url").is_some() && new.get("url") != Some(&json!(null)) {
-            let mut url = new.get("url").unwrap().to_string();
-            url = url.replace("\"", "").replace(" ", "");
-            Some(url)
-        } else { None }
-    } else {
-        None
+pub fn extract_url_from_edit_data(json: JsonValue) -> Vec<String> {
+    let mut result: Vec<String> = vec![];
+    if add_relationship_type0_url(&json).is_some() {
+        result.push(add_relationship_type0_url(&json).unwrap());
+    } else if add_relationship_type1_url(&json).is_some() {
+        result.push(add_relationship_type1_url(&json).unwrap());
+    } else if edit_relationship_type0_url(&json).is_some() {
+        result.push(edit_relationship_type0_url(&json).unwrap());
+    } else if edit_relationship_type1_url(&json).is_some() {
+        result.push(edit_relationship_type1_url(&json).unwrap());
+    } else if edit_url(&json).is_some() {
+        result.push(edit_url(&json).unwrap());
+    } else if any_annotation(&json).is_some() {
+        result.append(&mut any_annotation(&json).unwrap());
     }
+    result
+}
+
+fn add_relationship_type1_url(json: &JsonValue) -> Option<String> {
+    if json.get("type1") == Some(&json!("url")) {
+        if json.get("entity1").is_some() &&
+            json.get("entity1").unwrap().get("name").is_some() {
+            return Some(json.get("entity1").unwrap().get("name").unwrap().to_string());
+        };
+    }
+    return None;
+}
+
+fn add_relationship_type0_url(json: &JsonValue) -> Option<String> {
+    if json.get("type0") == Some(&json!("url")) {
+        if json.get("entity0").is_some() &&
+            json.get("entity0").unwrap().get("name").is_some() {
+            return Some(json.get("entity1").unwrap().get("name").unwrap().to_string());
+        };
+    }
+    return None;
+}
+
+fn edit_relationship_type0_url(json: &JsonValue) -> Option<String> {
+    if json.get("type0") == Some(&json!("url")) {
+        if json.get("new").is_some()
+            && json.get("new").unwrap().get("entity0").is_some() &&
+            json.get("new").unwrap().get("entity0").unwrap().get("name").is_some() {
+                return Some(json.get("new").unwrap().get("entity0").unwrap().get("name").unwrap().to_string());
+        };
+    };
+    return None;
+}
+
+fn edit_relationship_type1_url(json: &JsonValue) -> Option<String> {
+    if json.get("type1") == Some(&json!("url")) {
+        if json.get("new").is_some()
+            && json.get("new").unwrap().get("entity1").is_some() &&
+            json.get("new").unwrap().get("entity1").unwrap().get("name").is_some() {
+            return Some(json.get("new").unwrap().get("entity1").unwrap().get("name").unwrap().to_string());
+        };
+    };
+    return None;
+}
+
+fn edit_url(json: &JsonValue) -> Option<String> {
+    if json.get("new").is_some() &&
+        json.get("new").unwrap().get("url").is_some() {
+        return Some(json.get("new").unwrap().get("url").unwrap().to_string());
+    }
+    return None;
+}
+
+fn any_annotation(json: &JsonValue) -> Option<Vec<String>> {
+    if json.get("text").is_some() {
+        let result = extract_urls_from_text(json.get("text").unwrap().as_str().unwrap());
+        if !result.is_empty() {
+            return Some(result)
+        };
+    }
+    return None;
 }
 
 //TODO: Handle: 1. Can we/should we retrieve latest rows faster?

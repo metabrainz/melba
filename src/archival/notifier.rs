@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{Error, PgPool};
 use crate::archival::utils;
 
 
@@ -19,15 +19,16 @@ impl Notifier {
             pool
         }
     }
-    pub async fn notify(&mut self) {
+    pub async fn notify(&mut self) -> Result<(), Error> {
         let pool = self.pool.clone();
-        sqlx::query("SELECT external_url_archiver.notify_archive_urls($1)")
+        let rows: (i32, ) = sqlx::query_as::<_,(i32,)>("SELECT external_url_archiver.notify_archive_urls($1)")
             .bind(self.start_notifier_from)
-            .execute(&pool)
-            .await
-            .unwrap();
-        println!("[start_id from notify], {}", self.start_notifier_from);
-        self.start_notifier_from = self.start_notifier_from + 2;
+            .fetch_one(&pool)
+            .await?;
+        let processed_rows = rows.0;
+        println!("[start_id from notify], {} and add {}", self.start_notifier_from, processed_rows);
+        self.start_notifier_from = self.start_notifier_from + processed_rows;
+        Ok(())
     }
 }
 

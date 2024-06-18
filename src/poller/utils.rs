@@ -80,7 +80,8 @@ pub async fn initialise_internet_archive_table(
     pool: &PgPool,
 ) -> Vec<i32> {
     create_internet_archive_urls_table(pool).await;
-    //TODO: uncomment it later and replace the hardcoded ids with fetched ones, and also insert them to internet_archive_urls table
+    //TODO: uncomment it later and replace the hardcoded ids with fetched ones,
+    // and also insert them to internet_archive_urls table
 
     // let  select_latest_edit_data_row = "
     //      SELECT DISTINCT ON (edit)
@@ -138,7 +139,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
     url: &str,
     pool: &PgPool
 ) -> Result<bool, Error> {
-    if should_exclude_url(url) == true {
+    if should_exclude_url(url) {
         return Ok(false)
     }
     let res: Option<(bool, )> = sqlx::query_as(

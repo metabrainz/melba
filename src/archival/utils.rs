@@ -7,7 +7,11 @@ pub async fn get_last_unarchived_row_from_internet_archive_urls_table(
     pool: PgPool
 ) -> i32 {
     let last_row = sqlx::query_as::<_,InternetArchiveUrls>(
-        "SELECT DISTINCT ON (id) * from external_url_archiver.internet_archive_urls where is_saved = false order by id limit 1 "
+        r#"SELECT DISTINCT ON (id) *
+             FROM external_url_archiver.internet_archive_urls
+             WHERE is_saved = false
+             ORDER BY id
+             LIMIT 1 "#
     )
         .fetch_one(&pool)
         .await

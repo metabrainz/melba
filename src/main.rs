@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     dotenv().ok();
 
-    let hostname = env::var("PGHOST").expect("PGHOST environmental variable is not set");
+    let hostname = env::var("PGHOST").expect("PGHOST env variable is not set");
 
     const POLL_INTERVAL: u64 = 10;
     //TODO: How to manage prod DB and dev DB?
@@ -46,7 +46,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             while !notifier_pool.is_closed() {
                 interval.tick().await;
                 let notifier = Arc::clone(&notifier);
-                notifier.lock().await.notify().await;
+                if let Err(e) = notifier.lock().await.notify().await {
+                    println!("Notify failed, error: {}", e)
+                };
             };
         });
 

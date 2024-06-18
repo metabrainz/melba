@@ -5,6 +5,7 @@ use std::time::Duration;
 use tokio::time::interval;
 use crate::poller::utils::extract_last_rows_idx_from_internet_archive_table;
 
+/// Responsible for polling musicbrainz data for edit_notes (edit_data is being handled by postgres trigger)
 pub struct Poller {
     poll_interval: u64,
     pool: sqlx::PgPool,

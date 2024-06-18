@@ -67,8 +67,8 @@ There are 2 methods to run the program:
 2. Use the Dockerfile
    - Note that the container has to run in the same network as musicbrainz db network bridge.
    - ```shell
-     docker buildx build -t mb-exurl-ia-service:latest .
+     docker buildx build --build-arg PGHOST=musicbrainz-docker-db-1 -t mb-exurl-ia-service:latest .
      ```
    - ```shell
-     docker run --network musicbrainz-docker_default -it mb-exurl-ia-service:latest
+      docker run -e PGHOST=musicbrainz-docker-db-1 --network musicbrainz-docker_default -it mb-exurl-ia-service:latest
      ```

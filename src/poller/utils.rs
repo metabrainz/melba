@@ -56,7 +56,7 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
         "
         SELECT DISTINCT ON (from_table)
         id, url, job_id, from_table, from_table_id, created_at, retry_count, is_saved
-        FROM internet_archive_urls
+        FROM external_url_archiver.internet_archive_urls
         WHERE from_table IN ('edit_data', 'edit_note')
         ORDER BY from_table, from_table_id DESC;
         "
@@ -109,31 +109,16 @@ pub async fn initialise_internet_archive_table(
 }
 
 ///Initiate internet_archive_urls table
-/// For development, adding 2 rows initially for the sake of demonstration TODO: Remove the two inserts
+/// For development, adding 2 rows initially for the sake of demonstration TODO: Remove insert statements
 async fn create_internet_archive_urls_table(
     pool: &PgPool
 ) {
-    let create_internet_archive_urls_table = "
-        create table if not exists internet_archive_urls(
-        id serial,
-        url text,
-        job_id text, -- response returned when we make the URL save request
-        from_table varchar, -- table from where URL is taken
-        from_table_id integer, -- id of the row from where the URL is taken
-        created_at timestamp with time zone default now(),
-        retry_count integer, -- keeps track of number of retries made for the URL
-        is_saved boolean);
-        ";
-    sqlx::query(create_internet_archive_urls_table)
-        .execute(pool)
-        .await
-        .unwrap();
 
-    let sample_edit_note_row = "INSERT INTO internet_archive_urls
+    let sample_edit_note_row = "INSERT INTO external_url_archiver.internet_archive_urls
     (url, from_table, from_table_id, retry_count, is_saved) VALUES
     ('https://blackpaintingsdiscography.bandcamp.com/album/asmodea', 'edit_note', 70000000, 0, false);";
 
-    let sample_edit_data_row = "INSERT INTO internet_archive_urls
+    let sample_edit_data_row = "INSERT INTO external_url_archiver.internet_archive_urls
     (url, from_table, from_table_id, retry_count, is_saved) VALUES
     ('http://rut-hc.bandcamp.com/album/demo', 'edit_data', 48470658 , 0, false);";
 
@@ -156,7 +141,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
     let res: Option<(bool, )> = sqlx::query_as(
         r#"
         SELECT (CURRENT_TIMESTAMP - created_at) > INTERVAL '1 DAY' AS daydiff
-        FROM internet_archive_urls
+        FROM external_url_archiver.internet_archive_urls
         WHERE url = $1
         "#)
         .bind(url)

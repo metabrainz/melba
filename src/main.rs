@@ -1,6 +1,8 @@
+use std::env;
 use std::ops::Deref;
 use std::sync::{Arc};
 use std::time::Duration;
+use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use tokio::join;
 use tokio::sync::Mutex;
@@ -13,9 +15,14 @@ mod structs;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    dotenv().ok();
+
+    let hostname = env::var("PGHOST").expect("PGHOST environmental variable is not set");
+
     const POLL_INTERVAL: u64 = 10;
     //TODO: How to manage prod DB and dev DB?
-    let db_url = "postgres://musicbrainz:musicbrainz@musicbrainz-docker-db-1:5432/musicbrainz_db";
+    let db_url = format!("postgres://musicbrainz:musicbrainz@{}:5432/musicbrainz_db", hostname);
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&db_url)

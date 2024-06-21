@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 // Generated with sql-gen
 // https://github.com/jayy-lmao/sql-gen
-//TODO: move this to mb-rs
 use sqlx::types::chrono;
 use serde::{Deserialize};
 

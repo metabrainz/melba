@@ -9,6 +9,21 @@ CREATE TABLE internet_archive_urls (
         is_saved            boolean
 );
 
+CREATE FUNCTION notify_archive_urls(start_id INTEGER)
+RETURNS INTEGER AS $$
+    DECLARE
+        rec RECORD;
+        count INTEGER := 0;
+    BEGIN
+        FOR rec IN SELECT * FROM internet_archive_urls WHERE id >= start_id ORDER BY id LIMIT 2
+        LOOP
+            PERFORM pg_notify('archive_urls', row_to_json(rec)::text);
+            count := count + 1;
+        END LOOP;
+        RETURN count;
+    END;
+$$ LANGUAGE 'plpgsql';
+
 INSERT INTO internet_archive_urls(url, from_table, from_table_id, retry_count, is_saved) VALUES
 ('https://blackpaintingsdiscography.bndcamp.com/album/asmodea', 'edit_note', 70000000, 0, false),
 ('https://blackpaintingsdiscography.bandcamp.com/album/the-dog', 'edit_note', 70000003, 0, false),

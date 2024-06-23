@@ -16,3 +16,4 @@ mb-rs = {git = "https://github.com/yellowHatpro/Rust-Playground.git"}
 serde = { version = "1.0.198", features = ["derive"] }
 chrono = { version = "0.4.38" , features = ["serde"] }
 dotenv = "0.15.0"
+clap = {version = "4.5.7", features = ["color", "derive"]}

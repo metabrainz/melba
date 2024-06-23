@@ -8,6 +8,7 @@ ARG PGHOST
 ENV PGHOST=${PGHOST}
 
 ENV RUSTFLAGS='-C target-feature=+crt-static'
+ENV SQLX_OFFLINE=true
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
@@ -19,8 +20,6 @@ FROM scratch
 WORKDIR /app
 
 COPY --from=builder /mb-exurl-ia-service ./app
-
-ENV PGHOST=${PGHOST}
 
 CMD ["/app/app"]
 

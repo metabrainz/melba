@@ -1,5 +1,5 @@
 mod looper;
-mod utils;
+pub mod utils;
 
 use std::time::Duration;
 use tokio::time::interval;

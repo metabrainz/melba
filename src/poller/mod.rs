@@ -17,7 +17,7 @@ impl Poller {
     pub async fn new(
         poll_interval: u64,
         pool: sqlx::PgPool) -> Poller {
-        let data_and_note =  extract_last_rows_idx_from_internet_archive_table(&pool).await;
+        let data_and_note = extract_last_rows_idx_from_internet_archive_table(&pool).await;
         Poller {
             poll_interval,
             pool,

@@ -1,8 +1,6 @@
-use std::env;
 use std::sync::{Arc};
 use std::time::Duration;
-use dotenv::dotenv;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
 use tokio::join;
 use tokio::sync::Mutex;
 use crate::archival;
@@ -10,20 +8,9 @@ use crate::archival::notifier::Notifier;
 use crate::poller::Poller;
 
 
-pub async fn start() -> Result<(), sqlx::Error> {
-
-    dotenv().ok();
-
-    let hostname = env::var("PGHOST").expect("PGHOST env variable is not set");
+pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
 
     const POLL_INTERVAL: u64 = 10;
-    //TODO: How to manage prod DB and dev DB?
-    let db_url = format!("postgres://musicbrainz:musicbrainz@{}:5432/musicbrainz_db", hostname);
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await
-        .unwrap();
 
     let notifier_pool = pool.clone();
     let listener_pool = pool.clone();

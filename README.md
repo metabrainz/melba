@@ -5,11 +5,10 @@
 ### Current Implementation (WIP)
 
 We want to get URLs from `edit_data` and `edit_note` tables, and archive them in Internet Archive history.
+The app provides multiple command line functionalities to archive URLs from `edit_data` and `edit_note` tables:
+![CLI functionality](assets/cli.png)
 
 We create a `external_url_archiver` schema, under which we create the required table, functions, trigger to make the service work.
-
-To get URLs from `edit_data` table, we use triggers.
-To get URLs from `edit_note` table, we use polling.
 
 Following are the long-running tasks:
 
@@ -29,36 +28,7 @@ Following are the long-running tasks:
      2. `listener`
          - Listens to the `archive_urls` channel, and makes the necessary Wayback Machine API request (The API calls are still to be made).
 
-### Architecture
-```
-.
-├── Cargo.toml // dependencies
-├── Dockerfile 
-├── README.md
-├── scripts //Helpful scripts for development
-│   ├── init_db.sh //initialises the external_url_archiver schema
-│   ├── reinit_db.sh //Drops the external_url_archiver schema and reinitializes it
-│   └── sql //Import sql scripts
-│       ├── 001_CreateSchema.sql
-│       ├── 002_CreateTable.sql
-│       ├── 003_CreateFunction.sql
-│       └── 004_CreateTrigger.sql
-└── src
-    ├── archival // Contains code for archive task
-    │   ├── listener.rs // Contains functions related to listening the channel, and saving the URLs in Wayback Machine
-    │   ├── mod.rs
-    │   ├── notifier.rs // Struct and Implementation of Notifier that notifies the channel
-    │   └── utils.rs // Various SQL related functions
-    ├── main.rs // Entrypoint
-    ├── poller // Module for polling and transforming Edit/Edit Note schema
-    │   ├── looper.rs // Methods called by polling task 
-    │   ├── mod.rs // Poller implementation
-    │   └── utils.rs // Various SQL functions related to polling and transformation logic
-    └── structs // Contains sqlx compliant rust structs
-        ├── internet_archive_urls.rs
-        └── mod.rs
-
-```
+### See the app architecture [here](./docs/architecture.md)
 
 ### Local setup
 > - Make sure musicbrainz db and the required database tables are present.

@@ -12,7 +12,7 @@ impl Notifier {
         pool: PgPool
     ) -> Notifier {
         let last_unarchived_row_from_internet_archive_urls_table =
-            utils::get_last_unarchived_row_from_internet_archive_urls_table(pool.clone()).await;
+            utils::get_first_index_to_start_notifier_from(pool.clone()).await;
         println!("Notifies starts from : {}", last_unarchived_row_from_internet_archive_urls_table);
         return Notifier {
             start_notifier_from: last_unarchived_row_from_internet_archive_urls_table,

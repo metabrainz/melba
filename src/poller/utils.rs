@@ -19,7 +19,7 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
 /// This function takes input a URL string, and returns true if it should exclude the URL from saving
 pub fn should_exclude_url(url: &str) -> bool {
     // TODO: discuss and add keywords to identify URLs we want to exclude
-    let keywords: Vec<&str> = vec!["musicbrainz", "metabrainz"];
+    let keywords: Vec<&str> = vec!["musicbrainz", "metabrainz", "web.archive.org"];
     keywords.iter().any(|keyword| url.contains(keyword))
 }
 

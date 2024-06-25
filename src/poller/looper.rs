@@ -18,7 +18,6 @@ pub async fn poll_db(
         .bind(edit_note_start_idx)
         .fetch_all(pool)
         .await?;
-    //TODO: transformations, and save transformed data to internet_archive_urls
     println!("Edits ->");
     for edit in edits {
         let urls = extract_url_from_edit_data(edit.data);

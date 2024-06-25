@@ -2,12 +2,15 @@ use super::*;
 
 #[test]
 fn test_extract_urls_from_text() {
-    let empty_text= "";
-    let text_with_one_url = "https://www.example.com";
-    let text_with_two_urls = "https://www.example.com https://www.example2.com";
-    assert_eq!(extract_urls_from_text(empty_text),Vec::<String>::new());
-    assert_eq!(extract_urls_from_text(text_with_one_url), vec!["https://www.example.com".to_string()]);
-    assert_eq!(extract_urls_from_text(text_with_two_urls), vec!["https://www.example.com".to_string(), "https://www.example2.com".to_string()]);
+    let empty_text = "";
+    let url1 = "https://www.example.com";
+    let url2 = "https://www.example2.com";
+    let email = "yellowhatpro3119@gmail.com";
+    let multiple_urls = format!("{url1} //.,<> best {url2}\\[] <> {email}");
+    assert_eq!(extract_urls_from_text(empty_text), Vec::<String>::new());
+    assert_eq!(extract_urls_from_text(url1), vec!["https://www.example.com".to_string()]);
+    assert_eq!(extract_urls_from_text(multiple_urls.as_str()), vec!["https://www.example.com".to_string(), "https://www.example2.com".to_string()]);
+    assert_eq!(extract_urls_from_text(email), Vec::<String>::new());
 }
 
 #[test]

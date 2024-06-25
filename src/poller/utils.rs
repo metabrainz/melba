@@ -19,7 +19,7 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
 /// This function takes input a URL string, and returns true if it should exclude the URL from saving
 pub fn should_exclude_url(url: &str) -> bool {
     // TODO: discuss and add keywords to identify URLs we want to exclude
-    let keywords: Vec<String> = vec![];
+    let keywords: Vec<&str> = vec!["musicbrainz", "metabrainz"];
     keywords.iter().any(|keyword| url.contains(keyword))
 }
 
@@ -45,8 +45,10 @@ pub fn extract_url_from_edit_data(json: JsonValue) -> Vec<String> {
 fn add_relationship_type1_url(json: &JsonValue) -> Option<String> {
     if json.get("type1") == Some(&json!("url")) {
         if json.get("entity1").is_some() &&
-            json.get("entity1").unwrap().get("name").is_some() {
-            return Some(json.get("entity1").unwrap().get("name").unwrap().to_string());
+            json["entity1"].get("name").is_some() {
+            let mut url = json["entity1"]["name"].to_string();
+            url = url.replace("\"", "").replace(" ", "");
+            return Some(url)
         };
     }
     return None;
@@ -55,8 +57,10 @@ fn add_relationship_type1_url(json: &JsonValue) -> Option<String> {
 fn add_relationship_type0_url(json: &JsonValue) -> Option<String> {
     if json.get("type0") == Some(&json!("url")) {
         if json.get("entity0").is_some() &&
-            json.get("entity0").unwrap().get("name").is_some() {
-            return Some(json.get("entity1").unwrap().get("name").unwrap().to_string());
+            json["entity0"].get("name").is_some() {
+            let mut url = json["entity0"]["name"].to_string();
+            url = url.replace("\"", "").replace(" ", "");
+            return Some(url);
         };
     }
     return None;
@@ -65,9 +69,11 @@ fn add_relationship_type0_url(json: &JsonValue) -> Option<String> {
 fn edit_relationship_type0_url(json: &JsonValue) -> Option<String> {
     if json.get("type0") == Some(&json!("url")) {
         if json.get("new").is_some()
-            && json.get("new").unwrap().get("entity0").is_some() &&
-            json.get("new").unwrap().get("entity0").unwrap().get("name").is_some() {
-                return Some(json.get("new").unwrap().get("entity0").unwrap().get("name").unwrap().to_string());
+            && json["new"].get("entity0").is_some() &&
+            json["new"]["entity0"].get("name").is_some() {
+            let mut url = json["new"]["entity0"]["name"].to_string();
+            url = url.replace("\"", "").replace(" ", "");
+            return Some(url);
         };
     };
     return None;
@@ -76,9 +82,11 @@ fn edit_relationship_type0_url(json: &JsonValue) -> Option<String> {
 fn edit_relationship_type1_url(json: &JsonValue) -> Option<String> {
     if json.get("type1") == Some(&json!("url")) {
         if json.get("new").is_some()
-            && json.get("new").unwrap().get("entity1").is_some() &&
-            json.get("new").unwrap().get("entity1").unwrap().get("name").is_some() {
-            return Some(json.get("new").unwrap().get("entity1").unwrap().get("name").unwrap().to_string());
+            && json["new"].get("entity1").is_some() &&
+            json["new"]["entity1"].get("name").is_some() {
+            let mut url = json["new"]["entity1"]["name"].to_string();
+            url = url.replace("\"", "").replace(" ", "");
+            return Some(url);
         };
     };
     return None;
@@ -86,15 +94,17 @@ fn edit_relationship_type1_url(json: &JsonValue) -> Option<String> {
 
 fn edit_url(json: &JsonValue) -> Option<String> {
     if json.get("new").is_some() &&
-        json.get("new").unwrap().get("url").is_some() {
-        return Some(json.get("new").unwrap().get("url").unwrap().to_string());
+        json["new"].get("url").is_some() {
+        let mut url = json["new"]["url"].to_string();
+        url = url.replace("\"", "").replace(" ", "");
+        return Some(url);
     }
     return None;
 }
 
 fn any_annotation(json: &JsonValue) -> Option<Vec<String>> {
     if json.get("text").is_some() {
-        let result = extract_urls_from_text(json.get("text").unwrap().as_str().unwrap());
+        let result = extract_urls_from_text(json["text"].as_str().unwrap());
         if !result.is_empty() {
             return Some(result)
         };
@@ -213,3 +223,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
         Ok(true)
     }
 }
+
+#[cfg(test)]
+#[path= "./tests/utils.rs"]
+mod tests;

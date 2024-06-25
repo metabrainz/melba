@@ -1,4 +1,6 @@
-CREATE TABLE internet_archive_urls (
+CREATE SCHEMA external_url_archiver;
+
+CREATE TABLE external_url_archiver.internet_archive_urls (
         id                  serial,
         url                 text,
         job_id              text, -- response returned when we make the URL save request
@@ -9,7 +11,7 @@ CREATE TABLE internet_archive_urls (
         is_saved            boolean
 );
 
-CREATE FUNCTION notify_archive_urls(start_id INTEGER)
+CREATE FUNCTION external_url_archiver.notify_archive_urls(start_id INTEGER)
 RETURNS INTEGER AS $$
     DECLARE
         rec RECORD;
@@ -24,7 +26,7 @@ RETURNS INTEGER AS $$
     END;
 $$ LANGUAGE 'plpgsql';
 
-INSERT INTO internet_archive_urls(url, from_table, from_table_id, retry_count, is_saved) VALUES
+INSERT INTO external_url_archiver.internet_archive_urls(url, from_table, from_table_id, retry_count, is_saved) VALUES
 ('https://blackpaintingsdiscography.bndcamp.com/album/asmodea', 'edit_note', 70000000, 0, false),
 ('https://blackpaintingsdiscography.bandcamp.com/album/the-dog', 'edit_note', 70000003, 0, false),
 ('http://finaltape.bandcamp.com/', 'edit_data', 48470688, 0, false),

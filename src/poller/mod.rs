@@ -29,12 +29,16 @@ impl Poller {
         let mut interval = interval(Duration::from_secs(self.poll_interval));
         loop {
             interval.tick().await;
-            if let Err(e) = looper::poll_db(&self.pool, self.edit_data_start_idx, self.edit_note_start_idx).await {
-                eprintln!("Error polling database: {}", e)
+            if let Ok((edit_data_id, edit_note_id)) = looper::poll_db(&self.pool, self.edit_data_start_idx, self.edit_note_start_idx)
+                .await {
+                    if edit_data_id.is_some() {
+                        self.edit_data_start_idx = edit_data_id.unwrap() + 1;
+                    }
+                    if edit_note_id.is_some() {
+                        self.edit_note_start_idx += edit_note_id.unwrap() + 1;
+                    }
             } else {
-                //TODO: check the rate of edit data and edit note production, and increment the indices properly.
-                self.edit_data_start_idx = self.edit_data_start_idx + 10;
-                self.edit_note_start_idx = self.edit_note_start_idx + 10;
+                eprintln!("Problem polling")
             }
         }
     }

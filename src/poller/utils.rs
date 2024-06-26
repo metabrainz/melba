@@ -24,7 +24,7 @@ pub fn should_exclude_url(url: &str) -> bool {
 }
 
 /// This function takes input Edit Data in form of JSONValue, checks if the Edit Data contains URL, and returns the URL as String
-pub fn extract_url_from_edit_data(json: JsonValue) -> Vec<String> {
+pub fn extract_url_from_edit_data(json: &JsonValue) -> Vec<String> {
     let mut result: Vec<String> = vec![];
     if add_relationship_type0_url(&json).is_some() {
         result.push(add_relationship_type0_url(&json).unwrap());
@@ -142,11 +142,9 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
 //TODO: Make the following logic better!
 ///This function should run when there is no internet_archive_urls table or the table is not populated
 pub async fn initialise_internet_archive_table(
-    pool: &PgPool,
+    _pool: &PgPool,
 ) -> Vec<i32> {
-    create_internet_archive_urls_table(pool).await;
     //TODO: uncomment it later and replace the hardcoded ids with fetched ones,
-    // and also insert them to internet_archive_urls table
 
     // let  select_latest_edit_data_row = "
     //      SELECT DISTINCT ON (edit)
@@ -171,32 +169,8 @@ pub async fn initialise_internet_archive_table(
     // let latest_edit = latest_edit_data_row.unwrap().edit;
     // println!("{}, note: {}", latest_edit, latest_edit_note);
     //0th-> Edit Data, 1st -> Edit Note
-    return vec![48470658, 70000000]
-}
 
-///Initiate internet_archive_urls table
-/// For development, adding 2 rows initially for the sake of demonstration TODO: Remove insert statements
-async fn create_internet_archive_urls_table(
-    pool: &PgPool
-) {
-
-    let sample_edit_note_row = "INSERT INTO external_url_archiver.internet_archive_urls
-    (url, from_table, from_table_id, retry_count, is_saved) VALUES
-    ('https://blackpaintingsdiscography.bandcamp.com/album/asmodea', 'edit_note', 70000000, 0, false);";
-
-    let sample_edit_data_row = "INSERT INTO external_url_archiver.internet_archive_urls
-    (url, from_table, from_table_id, retry_count, is_saved) VALUES
-    ('http://rut-hc.bandcamp.com/album/demo', 'edit_data', 48470658 , 0, false);";
-
-    sqlx::query(sample_edit_data_row)
-        .execute(pool)
-        .await
-        .unwrap();
-
-    sqlx::query(sample_edit_note_row)
-        .execute(pool)
-        .await
-        .unwrap();
+    return vec![111451813, 71025805]
 }
 
 ///This function checks if we are inserting the same url within a day into the internet_archive_urls table

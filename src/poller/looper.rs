@@ -6,21 +6,24 @@ pub async fn poll_db(
     pool: &PgPool,
     edit_data_start_idx: i32,
     edit_note_start_idx: i32
-) -> Result<(), Error> {
+) -> Result<(Option<i32>,Option<i32>), Error> {
     println!("EditNote: {}, EditData: {}", edit_note_start_idx, edit_data_start_idx);
+
     let edits = sqlx::query_as::<_, EditData>(
         r#"SELECT * FROM edit_data WHERE "edit" > $1 ORDER BY edit LIMIT 10"#)
         .bind(edit_data_start_idx)
         .fetch_all(pool)
         .await?;
+
     let notes = sqlx::query_as::<_, EditNote>(
         r#"SELECT * FROM edit_note WHERE "id" > $1 ORDER BY id LIMIT 10"#)
         .bind(edit_note_start_idx)
         .fetch_all(pool)
         .await?;
+
     println!("Edits ->");
-    for edit in edits {
-        let urls = extract_url_from_edit_data(edit.data);
+    for edit in &edits {
+        let urls = extract_url_from_edit_data(&edit.data);
         for url in urls {
             save_url_to_internet_archive_urls(
                 url.as_str(),
@@ -32,7 +35,7 @@ pub async fn poll_db(
         }
     }
     println!("Edit Notes ->");
-    for note in notes {
+    for note in &notes {
         let urls = extract_urls_from_text(note.text.as_str());
         for url in urls {
             save_url_to_internet_archive_urls(
@@ -44,7 +47,18 @@ pub async fn poll_db(
             println!("{}", url);
         }
     }
-    Ok(())
+
+    let last_edit_note_row_from_single_poll: Option<&EditNote> = notes.last();
+    let last_edit_data_row_from_single_poll: Option<&EditData> = edits.last();
+    let mut last_edit_id: Option<i32> = None;
+    let mut last_note_id: Option<i32> = None;
+    if last_edit_data_row_from_single_poll.is_some() {
+        last_edit_id = Some(last_edit_data_row_from_single_poll.unwrap().edit);
+    }
+    if last_edit_note_row_from_single_poll.is_some() {
+        last_note_id = Some(last_edit_note_row_from_single_poll.unwrap().id);
+    }
+    Ok((last_edit_id, last_note_id))
 }
 
 pub async fn save_url_to_internet_archive_urls(

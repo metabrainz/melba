@@ -16,13 +16,27 @@ pub async fn poll_db(
     println!("EditNote: {}, EditData: {}", edit_note_start_idx, edit_data_start_idx);
 
     let edits = sqlx::query_as::<_, EditData>(
-        r#"SELECT * FROM edit_data WHERE "edit" > $1 ORDER BY edit LIMIT 10"#)
+        r#"
+            SELECT DISTINCT ON (edit)
+            *
+            FROM edit_data
+            WHERE edit >= $1
+            ORDER BY edit
+            LIMIT 10;
+        "#)
         .bind(edit_data_start_idx)
         .fetch_all(pool)
         .await?;
 
     let notes = sqlx::query_as::<_, EditNote>(
-        r#"SELECT * FROM edit_note WHERE "id" > $1 ORDER BY id LIMIT 10"#)
+        r#"
+             SELECT DISTINCT ON (id)
+            *
+            FROM edit_note
+            WHERE id >= $1
+            ORDER BY id
+            LIMIT 10;
+        "#)
         .bind(edit_note_start_idx)
         .fetch_all(pool)
         .await?;
@@ -59,10 +73,10 @@ pub async fn poll_db(
     let mut new_edit_id: Option<i32> = None;
     let mut new_note_id: Option<i32> = None;
     if last_edit_data_row_from_single_poll.is_some() {
-        new_edit_id = Some(last_edit_data_row_from_single_poll.unwrap().edit+1);
+        new_edit_id = Some(last_edit_data_row_from_single_poll.unwrap().edit + 1);
     }
     if last_edit_note_row_from_single_poll.is_some() {
-        new_note_id = Some(last_edit_note_row_from_single_poll.unwrap().id+1);
+        new_note_id = Some(last_edit_note_row_from_single_poll.unwrap().id + 1);
     }
     Ok((new_edit_id, new_note_id))
 }

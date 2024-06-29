@@ -31,16 +31,18 @@ impl Poller {
         let mut interval = interval(Duration::from_secs(self.poll_interval));
         loop {
             interval.tick().await;
-            if let Ok((edit_data_id, edit_note_id)) = looper::poll_db(&self.pool, self.edit_data_start_idx, self.edit_note_start_idx)
-                .await {
-                if edit_data_id.is_some() {
-                    self.edit_data_start_idx = edit_data_id.unwrap();
+            match looper::poll_db(&self.pool, self.edit_data_start_idx, self.edit_note_start_idx).await {
+                Ok((edit_data_id, edit_note_id)) => {
+                    if edit_data_id.is_some() {
+                        self.edit_data_start_idx = edit_data_id.unwrap();
+                    }
+                    if edit_note_id.is_some() {
+                        self.edit_note_start_idx = edit_note_id.unwrap();
+                    }
                 }
-                if edit_note_id.is_some() {
-                    self.edit_note_start_idx += edit_note_id.unwrap();
+                Err(e) => {
+                    eprintln!("Problem polling {}", e)
                 }
-            } else {
-                eprintln!("Problem polling")
             }
         }
     }

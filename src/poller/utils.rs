@@ -166,7 +166,7 @@ pub async fn initialise_internet_archive_table(
         .await;
     let latest_edit_note = latest_edit_note_row.unwrap().id;
     let latest_edit = latest_edit_data_row.unwrap().edit;
-    println!("{}, note: {}", latest_edit, latest_edit_note);
+     println!("Latest edit: {}, note: {}", latest_edit, latest_edit_note);
     // 0th-> Edit Data, 1st -> Edit Note
     //TODO: Uncomment it later
     // (latest_edit, latest_edit_note)

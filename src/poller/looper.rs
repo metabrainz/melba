@@ -1,7 +1,13 @@
 use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool};
-use crate::poller::utils::{extract_url_from_edit_data, extract_urls_from_text, should_insert_url_to_internet_archive_urls};
+use crate::poller::utils::{extract_url_from_edit_data, extract_urls_from_text, save_url_to_internet_archive_urls};
 
+/// Function which runs on each poll and thus is responsible for:
+/// 1. Extracting the URL containing rows from different tables
+/// 2. Transform the rows accordingly
+/// 3. Check if we can insert the row in `internet_archive_urls` table, and insert it to the table
+///
+/// If the poll is successful, return the new ids of (`edit_data`,`edit_note`) to start the new poll with
 pub async fn poll_db(
     pool: &PgPool,
     edit_data_start_idx: i32,
@@ -47,37 +53,16 @@ pub async fn poll_db(
             println!("{}", url);
         }
     }
-
+    // Check ids to start the next poll with, and return them
     let last_edit_note_row_from_single_poll: Option<&EditNote> = notes.last();
     let last_edit_data_row_from_single_poll: Option<&EditData> = edits.last();
-    let mut last_edit_id: Option<i32> = None;
-    let mut last_note_id: Option<i32> = None;
+    let mut new_edit_id: Option<i32> = None;
+    let mut new_note_id: Option<i32> = None;
     if last_edit_data_row_from_single_poll.is_some() {
-        last_edit_id = Some(last_edit_data_row_from_single_poll.unwrap().edit);
+        new_edit_id = Some(last_edit_data_row_from_single_poll.unwrap().edit+1);
     }
     if last_edit_note_row_from_single_poll.is_some() {
-        last_note_id = Some(last_edit_note_row_from_single_poll.unwrap().id);
+        new_note_id = Some(last_edit_note_row_from_single_poll.unwrap().id+1);
     }
-    Ok((last_edit_id, last_note_id))
-}
-
-pub async fn save_url_to_internet_archive_urls(
-    url: &str,
-    from_table: &str,
-    from_table_id: i32,
-    pool: &PgPool) {
-    if should_insert_url_to_internet_archive_urls(url, pool).await.expect("Error: ") {
-        let query = r#"
-        INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
-         VALUES ($1, $2, $3, 0, false)"#;
-        sqlx::query(query)
-            .bind(url)
-            .bind(from_table)
-            .bind(from_table_id)
-            .execute(pool)
-            .await
-            .unwrap();
-    } else {
-        return;
-    }
+    Ok((new_edit_id, new_note_id))
 }

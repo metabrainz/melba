@@ -17,26 +17,28 @@ impl Poller {
     pub async fn new(
         poll_interval: u64,
         pool: sqlx::PgPool) -> Poller {
-        let data_and_note = extract_last_rows_idx_from_internet_archive_table(&pool).await;
+        let (edit_data_start_idx, edit_note_start_idx) = extract_last_rows_idx_from_internet_archive_table(&pool).await;
         Poller {
             poll_interval,
             pool,
-            edit_data_start_idx: data_and_note[0],
-            edit_note_start_idx: data_and_note[1]
+            edit_data_start_idx,
+            edit_note_start_idx
         }
     }
+
+    /// Polls the `edit_data` and `edit_note` tables continuously
     pub async fn poll(&mut self) {
         let mut interval = interval(Duration::from_secs(self.poll_interval));
         loop {
             interval.tick().await;
             if let Ok((edit_data_id, edit_note_id)) = looper::poll_db(&self.pool, self.edit_data_start_idx, self.edit_note_start_idx)
                 .await {
-                    if edit_data_id.is_some() {
-                        self.edit_data_start_idx = edit_data_id.unwrap() + 1;
-                    }
-                    if edit_note_id.is_some() {
-                        self.edit_note_start_idx += edit_note_id.unwrap() + 1;
-                    }
+                if edit_data_id.is_some() {
+                    self.edit_data_start_idx = edit_data_id.unwrap();
+                }
+                if edit_note_id.is_some() {
+                    self.edit_note_start_idx += edit_note_id.unwrap();
+                }
             } else {
                 eprintln!("Problem polling")
             }

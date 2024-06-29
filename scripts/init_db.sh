@@ -6,7 +6,7 @@ export $(grep -v '^#' ../.env | xargs)
 sql_dir="sql"
 
 # Array of SQL files
-sql_files=("001_CreateSchema.sql" "002_CreateTable.sql" "003_CreateFunction.sql" "004_CreateTrigger.sql")
+sql_files=("001_CreateSchema.sql" "002_CreateTable.sql" "003_CreateFunction.sql" "004_CreateTrigger.sql" "005_CreateIndex.sql")
 
 # Function to run a single SQL file
 run_sql_file() {

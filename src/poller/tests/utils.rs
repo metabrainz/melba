@@ -229,12 +229,12 @@ fn test_any_annotations() {
     assert_eq!(any_annotation(&series_annotation), Some(vec!["https://musicbrainz.org/edit/28734798".to_string()]));
 }
 
-#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql"))]
+#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql", "../../../tests/fixtures/EditNote.sql", "../../../tests/fixtures/EditData.sql" ))]
 async fn test_extract_last_rows_idx_from_internet_archive_table(pool: PgPool) -> Result<(), Error> {
     let last_row = extract_last_rows_idx_from_internet_archive_table(&pool).await;
-    assert_eq!(last_row, vec![48470708, 70000003]);
+    assert_eq!(last_row, (48470708, 70000003));
     sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;").execute(&pool).await.unwrap();
     let last_row_when_no_rows = extract_last_rows_idx_from_internet_archive_table(&pool).await;
-    assert_eq!(last_row_when_no_rows, vec![111451813, 71025805]);
+    assert_eq!(last_row_when_no_rows, (111451813, 71025805));
     Ok(())
 }

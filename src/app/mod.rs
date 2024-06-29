@@ -30,9 +30,13 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
             while !notifier_pool.is_closed() {
                 interval.tick().await;
                 let notifier = Arc::clone(&notifier);
-                if let Err(e) = notifier.lock().await.notify().await {
-                    println!("Notify failed, error: {}", e)
-                };
+                let mut notifier = notifier.lock().await;
+                if notifier.should_notify().await {
+                    println!("Notifying");
+                    if let Err(e) = notifier.notify().await {
+                        println!("Notify failed, error: {}", e)
+                    };
+                }
             };
         });
 
@@ -54,6 +58,5 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     if let Err(e) = listener_result {
         eprintln!("Listener task failed: {:?}", e);
     }
-
     Ok(())
 }

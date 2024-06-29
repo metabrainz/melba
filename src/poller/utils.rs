@@ -1,4 +1,5 @@
 use linkify::{LinkFinder, LinkKind};
+use mb_rs::schema::{EditData, EditNote};
 use serde_json::json;
 use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
@@ -112,28 +113,26 @@ fn any_annotation(json: &JsonValue) -> Option<Vec<String>> {
     return None;
 }
 
-//TODO: Handle: 1. Can we/should we retrieve latest rows faster?
 ///This function fetches the latest row from internet_archive_urls_table
 pub async fn extract_last_rows_idx_from_internet_archive_table(
     pool: &PgPool
-) -> Vec<i32> {
+) -> (i32,i32) {
     let last_row = sqlx::query_as::<_, InternetArchiveUrls>(
-        "
+        r#"
         SELECT DISTINCT ON (from_table)
         id, url, job_id, from_table, from_table_id, created_at, retry_count, is_saved
         FROM external_url_archiver.internet_archive_urls
         WHERE from_table IN ('edit_data', 'edit_note')
         ORDER BY from_table, from_table_id DESC;
-        "
-    )
-        .fetch_all(pool)
+        "#
+    ).fetch_all(pool)
         .await;
     return match last_row {
         Ok(res) => {
-            if res.is_empty(){
+            if res.is_empty() {
                 return initialise_internet_archive_table(pool).await
             }
-            return vec![res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap()]
+            return (res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap())
         },
         Err(_e) => initialise_internet_archive_table(pool).await
     }
@@ -142,35 +141,36 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
 //TODO: Make the following logic better!
 ///This function should run when there is no internet_archive_urls table or the table is not populated
 pub async fn initialise_internet_archive_table(
-    _pool: &PgPool,
-) -> Vec<i32> {
-    //TODO: uncomment it later and replace the hardcoded ids with fetched ones,
+    pool: &PgPool,
+) -> (i32,i32) {
+    let select_latest_edit_data_row = "
+         SELECT DISTINCT ON (edit)
+         *
+         FROM edit_data
+         ORDER BY edit  DESC limit 1";
 
-    // let  select_latest_edit_data_row = "
-    //      SELECT DISTINCT ON (edit)
-    //      *
-    //      FROM edit_data
-    //      ORDER BY edit  DESC limit 1";
-    //
-    // let latest_edit_data_row = sqlx::query_as::<_,EditData>(select_latest_edit_data_row)
-    //     .fetch_one(pool)
-    //     .await;
-    //
-    // let select_latest_edit_note_row = "
-    //      SELECT DISTINCT ON (id)
-    //      *
-    //      FROM edit_note
-    //      ORDER BY id  DESC limit 1";
-    //
-    // let latest_edit_note_row = sqlx::query_as::<_, EditNote>(select_latest_edit_note_row)
-    //     .fetch_one(pool)
-    //     .await;
-    // let latest_edit_note = latest_edit_note_row.unwrap().id;
-    // let latest_edit = latest_edit_data_row.unwrap().edit;
-    // println!("{}, note: {}", latest_edit, latest_edit_note);
-    //0th-> Edit Data, 1st -> Edit Note
+    let latest_edit_data_row = sqlx::query_as::<_, EditData>(
+        select_latest_edit_data_row
+    ).fetch_one(pool)
+        .await;
 
-    return vec![111451813, 71025805]
+    let select_latest_edit_note_row = "
+         SELECT DISTINCT ON (id)
+         *
+         FROM edit_note
+         ORDER BY id  DESC LIMIT 1";
+
+    let latest_edit_note_row = sqlx::query_as::<_, EditNote>(
+        select_latest_edit_note_row
+    ).fetch_one(pool)
+        .await;
+    let latest_edit_note = latest_edit_note_row.unwrap().id;
+    let latest_edit = latest_edit_data_row.unwrap().edit;
+    println!("{}, note: {}", latest_edit, latest_edit_note);
+    // 0th-> Edit Data, 1st -> Edit Note
+    //TODO: Uncomment it later
+    // (latest_edit, latest_edit_note)
+    (111451813, 71025805)
 }
 
 ///This function checks if we are inserting the same url within a day into the internet_archive_urls table
@@ -195,6 +195,27 @@ pub async fn should_insert_url_to_internet_archive_urls(
         return Ok(bool_val);
     } else {
         Ok(true)
+    }
+}
+
+pub async fn save_url_to_internet_archive_urls(
+    url: &str,
+    from_table: &str,
+    from_table_id: i32,
+    pool: &PgPool) {
+    if should_insert_url_to_internet_archive_urls(url, pool).await.expect("Error: ") {
+        let query = r#"
+        INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
+         VALUES ($1, $2, $3, 0, false)"#;
+        sqlx::query(query)
+            .bind(url)
+            .bind(from_table)
+            .bind(from_table_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    } else {
+        return;
     }
 }
 

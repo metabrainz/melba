@@ -24,7 +24,7 @@ Following are the long-running tasks:
          - Creates a `Notifier` implementation which:
            - Fetches the last unarchived URL row from `internet_archive_urls` table, and start notifying from this row id.
            - Initialises a postgres function `notify_archive_urls`, which takes the `start_id` integer value, from where we start notifying the channel in one go.
-         - Reads `internet_archive_urls` table, and notifies the task which will save the URLS, through a channel called `archive_urls`.
+         - Reads `internet_archive_urls` table periodically, and notifies the task which will save the URLS, through a channel called `archive_urls`.
      2. `listener`
          - Listens to the `archive_urls` channel, and makes the necessary Wayback Machine API request (The API calls are still to be made).
 
@@ -54,5 +54,5 @@ There are 2 methods to run the program:
       ```
    
    3. ```shell
-      docker run -e PGHOST=musicbrainz-docker-db-1 --network musicbrainz-docker_default -it mb-exurl-ia-service:latest
+      docker run -e PGHOST=musicbrainz-docker-db-1 --network musicbrainz-docker_default --init mb-exurl-ia-service:latest
       ```

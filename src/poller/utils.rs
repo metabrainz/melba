@@ -17,13 +17,6 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
     urls
 }
 
-/// This function takes input a URL string, and returns true if it should exclude the URL from saving
-pub fn should_exclude_url(url: &str) -> bool {
-    // TODO: discuss and add keywords to identify URLs we want to exclude
-    let keywords: Vec<&str> = vec!["musicbrainz", "metabrainz", "web.archive.org"];
-    keywords.iter().any(|keyword| url.contains(keyword))
-}
-
 /// This function takes input Edit Data in form of JSONValue, checks if the Edit Data contains URL, and returns the URL as String
 pub fn extract_url_from_edit_data(json: &JsonValue) -> Vec<String> {
     let mut result: Vec<String> = vec![];
@@ -114,7 +107,7 @@ fn any_annotation(json: &JsonValue) -> Option<Vec<String>> {
 }
 
 ///This function fetches the latest row from internet_archive_urls_table
-pub async fn extract_last_rows_idx_from_internet_archive_table(
+pub async fn get_edit_data_and_note_start_id(
     pool: &PgPool
 ) -> (i32,i32) {
     let last_row = sqlx::query_as::<_, InternetArchiveUrls>(
@@ -129,20 +122,50 @@ pub async fn extract_last_rows_idx_from_internet_archive_table(
         .await;
     return match last_row {
         Ok(res) => {
-            if res.is_empty() {
-                return initialise_internet_archive_table(pool).await
+            match res.len() {
+                1 => {
+                    if res.get(0).unwrap().from_table == Some("edit_data".to_string()) {
+                        let edit_data_id = res.get(0).unwrap().from_table_id.unwrap();
+                        let edit_note_id = get_latest_edit_note_id(pool).await;
+                        (edit_data_id, edit_note_id)
+                    } else {
+                        let edit_note_id = res.get(0).unwrap().from_table_id.unwrap();
+                        let edit_data_id = get_latest_edit_data_id(pool).await;
+                        (edit_data_id, edit_note_id)
+                    }
+                },
+                2 => {
+                    (res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap())
+                },
+                _ => {
+                    initialise_empty_internet_archive_table(pool).await
+                }
             }
-            return (res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap())
         },
-        Err(_e) => initialise_internet_archive_table(pool).await
+        Err(e) => {
+            eprintln!("Error fetching edit data and edit note start id to start polling with. Error: {}", e);
+            initialise_empty_internet_archive_table(pool).await
+        }
     }
 }
 
 //TODO: Make the following logic better!
 ///This function should run when there is no internet_archive_urls table or the table is not populated
-pub async fn initialise_internet_archive_table(
+pub async fn initialise_empty_internet_archive_table(
     pool: &PgPool,
 ) -> (i32,i32) {
+    let latest_edit_note = get_latest_edit_note_id(pool).await;
+    let latest_edit = get_latest_edit_data_id(pool).await;
+     println!("Latest edit: {}, note: {}", latest_edit, latest_edit_note);
+    // 0th-> Edit Data, 1st -> Edit Note
+    //TODO: Uncomment it later
+    // (latest_edit, latest_edit_note)
+    (111451813, 71025805)
+}
+
+pub async fn get_latest_edit_data_id(
+    pool: &PgPool
+) -> i32 {
     let select_latest_edit_data_row = "
          SELECT DISTINCT ON (edit)
          *
@@ -153,7 +176,12 @@ pub async fn initialise_internet_archive_table(
         select_latest_edit_data_row
     ).fetch_one(pool)
         .await;
+    latest_edit_data_row.unwrap().edit
+}
 
+pub async fn get_latest_edit_note_id(
+    pool: &PgPool
+) -> i32 {
     let select_latest_edit_note_row = "
          SELECT DISTINCT ON (id)
          *
@@ -164,13 +192,14 @@ pub async fn initialise_internet_archive_table(
         select_latest_edit_note_row
     ).fetch_one(pool)
         .await;
-    let latest_edit_note = latest_edit_note_row.unwrap().id;
-    let latest_edit = latest_edit_data_row.unwrap().edit;
-     println!("Latest edit: {}, note: {}", latest_edit, latest_edit_note);
-    // 0th-> Edit Data, 1st -> Edit Note
-    //TODO: Uncomment it later
-    // (latest_edit, latest_edit_note)
-    (111451813, 71025805)
+    latest_edit_note_row.unwrap().id
+}
+
+/// This function takes input a URL string, and returns true if it should exclude the URL from saving
+pub fn should_exclude_url(url: &str) -> bool {
+    // TODO: discuss and add keywords to identify URLs we want to exclude
+    let keywords: Vec<&str> = vec!["www.musicbrainz.org", "https://musicbrainz.org", "www.metabrainz.org", "https://metabrainz.org", "web.archive.org"];
+    keywords.iter().any(|keyword| url.contains(keyword))
 }
 
 ///This function checks if we are inserting the same url within a day into the internet_archive_urls table
@@ -191,7 +220,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
         .fetch_optional(pool)
         .await?;
     if res.is_some() {
-        let bool_val = res.unwrap().0;
+        let (bool_val,) = res.unwrap();
         return Ok(bool_val);
     } else {
         Ok(true)

@@ -3,9 +3,9 @@ pub mod utils;
 
 use std::time::Duration;
 use tokio::time::interval;
-use crate::poller::utils::extract_last_rows_idx_from_internet_archive_table;
+use crate::poller::utils::get_edit_data_and_note_start_id;
 
-/// Responsible for polling musicbrainz data for edit_notes (edit_data is being handled by postgres trigger)
+/// Responsible for polling musicbrainz data for edit_notes and edit_data
 pub struct Poller {
     poll_interval: u64,
     pool: sqlx::PgPool,
@@ -16,8 +16,9 @@ pub struct Poller {
 impl Poller {
     pub async fn new(
         poll_interval: u64,
-        pool: sqlx::PgPool) -> Poller {
-        let (edit_data_start_idx, edit_note_start_idx) = extract_last_rows_idx_from_internet_archive_table(&pool).await;
+        pool: sqlx::PgPool
+    ) -> Poller {
+        let (edit_data_start_idx, edit_note_start_idx) = get_edit_data_and_note_start_id(&pool).await;
         Poller {
             poll_interval,
             pool,

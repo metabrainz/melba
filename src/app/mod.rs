@@ -34,7 +34,7 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
                 if notifier.should_notify().await {
                     println!("Notifying");
                     if let Err(e) = notifier.notify().await {
-                        println!("Notify failed, error: {}", e)
+                        eprintln!("Notify failed, error: {}", e)
                     };
                 }
             };

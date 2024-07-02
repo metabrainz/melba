@@ -5,12 +5,14 @@ fn test_extract_urls_from_text() {
     let empty_text = "";
     let url1 = "https://www.example.com";
     let url2 = "https://www.example2.com";
+    let url_with_excluded_keyword_benign = "https://www.example.com/musicbrainz-something";
     let email = "yellowhatpro3119@gmail.com";
     let multiple_urls = format!("{url1} //.,<> best {url2}\\[] <> {email}");
     assert_eq!(extract_urls_from_text(empty_text), Vec::<String>::new());
     assert_eq!(extract_urls_from_text(url1), vec!["https://www.example.com".to_string()]);
     assert_eq!(extract_urls_from_text(multiple_urls.as_str()), vec!["https://www.example.com".to_string(), "https://www.example2.com".to_string()]);
     assert_eq!(extract_urls_from_text(email), Vec::<String>::new());
+    assert_eq!(extract_urls_from_text(url_with_excluded_keyword_benign), vec!["https://www.example.com/musicbrainz-something".to_string()]);
 }
 
 #[test]
@@ -230,11 +232,41 @@ fn test_any_annotations() {
 }
 
 #[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql", "../../../tests/fixtures/EditNote.sql", "../../../tests/fixtures/EditData.sql" ))]
-async fn test_extract_last_rows_idx_from_internet_archive_table(pool: PgPool) -> Result<(), Error> {
-    let last_row = extract_last_rows_idx_from_internet_archive_table(&pool).await;
+async fn test_get_edit_data_and_note_start_id(pool: PgPool) -> Result<(), Error> {
+    let last_row = get_edit_data_and_note_start_id(&pool).await;
     assert_eq!(last_row, (48470708, 70000003));
     sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;").execute(&pool).await.unwrap();
-    let last_row_when_no_rows = extract_last_rows_idx_from_internet_archive_table(&pool).await;
+    let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await;
     assert_eq!(last_row_when_no_rows, (111451813, 71025805));
+    Ok(())
+}
+
+#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql", "../../../tests/fixtures/EditNote.sql", "../../../tests/fixtures/EditData.sql" ))]
+async fn test_get_edit_data_and_note_start_id_only_edit_data(pool: PgPool) -> Result<(), Error> {
+    sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;").execute(&pool).await.unwrap();
+    sqlx::query(r#"
+     INSERT INTO external_url_archiver.internet_archive_urls(url, from_table, from_table_id, retry_count, is_saved)
+     VALUES ('https://example.com', 'edit_data', 1000, 0, false);
+    "#
+    ).execute(&pool)
+        .await
+        .unwrap();
+    let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await;
+    assert_eq!(last_row_when_no_rows, (1000, 2));
+    Ok(())
+}
+
+#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql", "../../../tests/fixtures/EditNote.sql", "../../../tests/fixtures/EditData.sql" ))]
+async fn test_get_edit_data_and_note_start_id_only_edit_note(pool: PgPool) -> Result<(), Error> {
+    sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;").execute(&pool).await.unwrap();
+    sqlx::query(r#"
+     INSERT INTO external_url_archiver.internet_archive_urls(url, from_table, from_table_id, retry_count, is_saved)
+     VALUES ('https://example.com', 'edit_note', 1000, 0, false);
+    "#
+    ).execute(&pool)
+        .await
+        .unwrap();
+    let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await;
+    assert_eq!(last_row_when_no_rows, (2, 1000));
     Ok(())
 }

@@ -1,6 +1,6 @@
 use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool};
-use crate::poller::utils::{extract_url_from_edit_data, extract_urls_from_text, save_url_to_internet_archive_urls};
+use crate::poller::utils::{extract_url_from_edit_data, extract_url_from_edit_note, save_url_to_internet_archive_urls};
 
 /// Function which runs on each poll and thus is responsible for:
 /// 1. Extracting the URL containing rows from different tables
@@ -43,7 +43,7 @@ pub async fn poll_db(
 
     println!("Edits ->");
     for edit in &edits {
-        let urls = extract_url_from_edit_data(&edit.data);
+        let urls = extract_url_from_edit_data(&edit, pool).await;
         for url in urls {
             save_url_to_internet_archive_urls(
                 url.as_str(),
@@ -56,7 +56,7 @@ pub async fn poll_db(
     }
     println!("Edit Notes ->");
     for note in &notes {
-        let urls = extract_urls_from_text(note.text.as_str());
+        let urls = extract_url_from_edit_note(note, pool).await;
         for url in urls {
             save_url_to_internet_archive_urls(
                 url.as_str(),

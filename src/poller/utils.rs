@@ -1,9 +1,36 @@
 use linkify::{LinkFinder, LinkKind};
 use mb_rs::schema::{EditData, EditNote};
-use serde_json::json;
+use serde_json::{json, Value};
 use sqlx::{Error, PgPool};
 use sqlx::types::JsonValue;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
+
+/// This function takes input Edit Note, checks if
+/// - the EditNote's text contains URL
+/// - the Editor is not a spammer
+///
+/// and returns the vector of (URL as String)
+pub async fn extract_url_from_edit_note(note:&EditNote, pool: &PgPool) -> Vec<String> {
+    let editor = note.editor;
+    if get_is_editor_spammer(editor, pool).await {
+        return vec![]
+    }
+    extract_urls_from_text(note.text.as_str())
+}
+
+/// This function takes input Edit Data, checks if
+/// - the Edit Data contains URL
+/// - the Editor is not a spammer
+///
+/// and returns the vector of (URL as String)
+pub async fn extract_url_from_edit_data(edit: &EditData, pool: &PgPool) -> Vec<String> {
+    let json : &Value = &edit.data;
+    let editor = get_editor_id_from_edit(edit.edit, pool).await;
+    if get_is_editor_spammer(editor, pool).await {
+        return vec![]
+    }
+   extract_urls_from_json(json)
+}
 
 /// This function takes text and outputs a vector of URLs as string
 pub fn extract_urls_from_text(text: &str) -> Vec<String> {
@@ -17,8 +44,8 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
     urls
 }
 
-/// This function takes input Edit Data in form of JSONValue, checks if the Edit Data contains URL, and returns the URL as String
-pub fn extract_url_from_edit_data(json: &JsonValue) -> Vec<String> {
+/// This function takes json and outputs a vector of URL as string
+pub fn extract_urls_from_json(json: &JsonValue) -> Vec<String> {
     let mut result: Vec<String> = vec![];
     if add_relationship_type0_url(&json).is_some() {
         result.push(add_relationship_type0_url(&json).unwrap());
@@ -104,6 +131,43 @@ fn any_annotation(json: &JsonValue) -> Option<Vec<String>> {
         };
     }
     return None;
+}
+
+/// Returns true if a editor is marked spammer
+pub async fn get_is_editor_spammer(
+    editor_id: i32,
+    pool: &PgPool
+) -> bool {
+    let query = r#"
+    SELECT privs & 4096 = 0 as is_editor_spammer
+    FROM editor
+    WHERE id = $1;
+    "#;
+    let (is_editor_spammer, ) = sqlx::query_as::<_, (bool, )>(query)
+        .bind(editor_id)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    return is_editor_spammer
+}
+
+///Returns the id of the editor, if edit id is given
+pub async fn get_editor_id_from_edit(
+    edit: i32,
+    pool: &PgPool
+) -> i32 {
+    let editor_id: (i32, ) = sqlx::query_as::<_, (i32, )>(
+        r#"
+               SELECT editor
+               FROM edit
+               WHERE id = $1;
+            "#
+    ).bind(edit)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+    let (editor_id, ) = editor_id;
+    editor_id
 }
 
 ///This function fetches the latest row from internet_archive_urls_table

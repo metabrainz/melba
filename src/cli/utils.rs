@@ -34,8 +34,7 @@ pub async fn insert_edit_data_row_to_internet_archive_urls(
         .fetch_one(pool)
         .await.unwrap();
 
-    //TODO: separate sql related logics in some other directory, and not depend on poller
-    let urls = poller::utils::extract_url_from_edit_data(&edit_data_row.data);
+    let urls = poller::utils::extract_url_from_edit_data(&edit_data_row, pool).await;
     for url in &urls {
         let id = sqlx::query!(
         r#"

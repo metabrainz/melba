@@ -24,16 +24,16 @@ fn test_should_exclude_url() {
 }
 
 #[test]
-fn test_extract_url_from_edit_data_with_empty_json() {
+fn test_extract_url_from_json_with_empty_json() {
     let json = json!({});
-    assert_eq!(extract_url_from_edit_data(&json), Vec::<String>::new());
+    assert_eq!(extract_urls_from_json(&json), Vec::<String>::new());
 }
 
 #[test]
-fn test_extract_url_from_edit_data_with_no_urls_containing_edit() {
+fn test_extract_url_from_json_with_no_urls_containing_edit() {
     let json = json!({"entity": {"id": 56583, "mbid": "113664a0-3109-42fc-a7a9-0c7473103673", "name": "Whatever Gets You Through the Day"},
             "cover_art_id": 18799571682u64, "cover_art_types": ["3"], "cover_art_comment": "", "cover_art_position": 7, "cover_art_mime_type": "image/jpeg"});
-    assert_eq!(extract_url_from_edit_data(&json), Vec::<String>::new());
+    assert_eq!(extract_urls_from_json(&json), Vec::<String>::new());
 }
 
 #[test]

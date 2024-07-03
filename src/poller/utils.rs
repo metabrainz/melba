@@ -24,12 +24,16 @@ pub async fn extract_url_from_edit_note(note:&EditNote, pool: &PgPool) -> Vec<St
 ///
 /// and returns the vector of (URL as String)
 pub async fn extract_url_from_edit_data(edit: &EditData, pool: &PgPool) -> Vec<String> {
-    let json : &Value = &edit.data;
-    let editor = get_editor_id_from_edit(edit.edit, pool).await;
-    if get_is_editor_spammer(editor, pool).await {
-        return vec![]
+    let json: &Value = &edit.data;
+    let editor = get_editor_id_from_edit_id(edit.edit, pool).await;
+    if editor.is_ok() {
+        if get_is_editor_spammer(editor.unwrap(), pool).await {
+            return vec![]
+        }
+        extract_urls_from_json(json)
+    } else {
+        vec![]
     }
-   extract_urls_from_json(json)
 }
 
 /// This function takes text and outputs a vector of URLs as string
@@ -139,7 +143,7 @@ pub async fn get_is_editor_spammer(
     pool: &PgPool
 ) -> bool {
     let query = r#"
-    SELECT privs & 4096 = 0 as is_editor_spammer
+    SELECT privs & 4096 != 0 as is_editor_spammer
     FROM editor
     WHERE id = $1;
     "#;
@@ -152,11 +156,11 @@ pub async fn get_is_editor_spammer(
 }
 
 ///Returns the id of the editor, if edit id is given
-pub async fn get_editor_id_from_edit(
+pub async fn get_editor_id_from_edit_id(
     edit: i32,
     pool: &PgPool
-) -> i32 {
-    let editor_id: (i32, ) = sqlx::query_as::<_, (i32, )>(
+) -> Result<i32, Error> {
+    let editor_id = sqlx::query_as::<_, (i32, )>(
         r#"
                SELECT editor
                FROM edit
@@ -165,8 +169,9 @@ pub async fn get_editor_id_from_edit(
     ).bind(edit)
         .fetch_one(pool)
         .await
-        .unwrap();
-    let (editor_id, ) = editor_id;
+        .map(|x| {
+            return x.0
+        });
     editor_id
 }
 
@@ -220,7 +225,7 @@ pub async fn initialise_empty_internet_archive_table(
 ) -> (i32,i32) {
     let latest_edit_note = get_latest_edit_note_id(pool).await;
     let latest_edit = get_latest_edit_data_id(pool).await;
-     println!("Latest edit: {}, note: {}", latest_edit, latest_edit_note);
+    println!("Latest edit: {}, note: {}", latest_edit, latest_edit_note);
     // 0th-> Edit Data, 1st -> Edit Note
     //TODO: Uncomment it later
     // (latest_edit, latest_edit_note)
@@ -296,7 +301,7 @@ pub async fn save_url_to_internet_archive_urls(
     from_table: &str,
     from_table_id: i32,
     pool: &PgPool) {
-    if should_insert_url_to_internet_archive_urls(url, pool).await.expect("Error: ") {
+    if let Ok(_)= should_insert_url_to_internet_archive_urls(url, pool).await {
         let query = r#"
         INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
          VALUES ($1, $2, $3, 0, false)"#;

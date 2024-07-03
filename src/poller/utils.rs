@@ -17,23 +17,22 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
     urls
 }
 
-/// This function takes input Edit Data in form of JSONValue, checks if the Edit Data contains URL, and returns the URL as String
+/// This function get the urls contained in the input edit data.
+///
+/// Depending on the type of edit data, it will give one or many urls:
+///  - "Add" and "edit" edits will give 1 url, as the edit concern a 1:1 relation between an entity and an Url
+///  - Annotations provide multiple Urls as it is arbitrary text made by the editor.
+/// 
+/// The input edit data is in [`JsonValue`] form.
 pub fn extract_url_from_edit_data(json: &JsonValue) -> Vec<String> {
-    let mut result: Vec<String> = vec![];
-    if add_relationship_type0_url(&json).is_some() {
-        result.push(add_relationship_type0_url(&json).unwrap());
-    } else if add_relationship_type1_url(&json).is_some() {
-        result.push(add_relationship_type1_url(&json).unwrap());
-    } else if edit_relationship_type0_url(&json).is_some() {
-        result.push(edit_relationship_type0_url(&json).unwrap());
-    } else if edit_relationship_type1_url(&json).is_some() {
-        result.push(edit_relationship_type1_url(&json).unwrap());
-    } else if edit_url(&json).is_some() {
-        result.push(edit_url(&json).unwrap());
-    } else if any_annotation(&json).is_some() {
-        result.append(&mut any_annotation(&json).unwrap());
-    }
-    result
+    None.or_else(|| add_relationship_type0_url(json))
+        .or_else(|| add_relationship_type1_url(json))
+        .or_else(|| edit_relationship_type0_url(json))
+        .or_else(|| edit_relationship_type1_url(json))
+        .or_else(|| edit_url(json))
+        .map(|single_url| vec![single_url])
+        .or_else(|| any_annotation(json))
+        .unwrap_or_default()
 }
 
 fn add_relationship_type1_url(json: &JsonValue) -> Option<String> {

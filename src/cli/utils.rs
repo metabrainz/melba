@@ -8,19 +8,17 @@ pub async fn insert_url_to_internet_archive_urls(
     url: &str,
     pool: &PgPool,
 ) -> Result<i32, Error> {
-    let id = sqlx::query!(
+    sqlx::query!(
         r#"
         INSERT INTO external_url_archiver.internet_archive_urls (url, retry_count, is_saved)
         VALUES ($1, 0, false)
         RETURNING id
     "#,
         url
-    ).fetch_one(pool)
-        .await?
-        .id;
-    return Ok(id);
+    ).fetch_one(pool).await.map(|result| result.id)
 }
 
+/// This function takes in an `edit_data` `row_id`, extract the urls contained inside, then insert them into the `internet_archive_urls` table
 pub async fn insert_edit_data_row_to_internet_archive_urls(
     row_id: i32,
     pool: &PgPool
@@ -32,7 +30,7 @@ pub async fn insert_edit_data_row_to_internet_archive_urls(
         "#
     ).bind(row_id)
         .fetch_one(pool)
-        .await.unwrap();
+        .await?;
 
     //TODO: separate sql related logics in some other directory, and not depend on poller
     let urls = poller::utils::extract_url_from_edit_data(&edit_data_row.data);
@@ -53,6 +51,7 @@ pub async fn insert_edit_data_row_to_internet_archive_urls(
     Ok(!urls.is_empty())
 }
 
+/// This function takes in an `edit_note` `row_id`, extract the urls contained inside, then insert them into the `internet_archive_urls` table
 pub async fn insert_edit_note_row_to_internet_archive_urls(
     row_id: i32,
     pool: &PgPool
@@ -64,9 +63,9 @@ pub async fn insert_edit_note_row_to_internet_archive_urls(
         "#
     ).bind(row_id)
         .fetch_one(pool)
-        .await.unwrap();
+        .await?;
 
-    let urls = poller::utils::extract_urls_from_text(edit_note_row.text.as_str());
+    let urls = poller::utils::extract_urls_from_text(&edit_note_row.text);
     for url in &urls {
         let id = sqlx::query!(
         r#"

@@ -5,7 +5,7 @@ use crate::poller;
 
 //TODO: Currently I am returning the internet_archive_urls row id when I insert any URL. Now there might be URLs which are already saved, hence instead of row id, show how many URLs are still there unprocessed, and is before the currently inserted one.
 pub async fn insert_url_to_internet_archive_urls(
-    url: String,
+    url: &str,
     pool: &PgPool,
 ) -> Result<i32, Error> {
     let id = sqlx::query!(
@@ -85,8 +85,9 @@ pub async fn insert_edit_note_row_to_internet_archive_urls(
 
 }
 
+// TODO
 pub async fn get_job_id_status(
-    job_id: String,
+    job_id: String, // TODO: Concider using &str? 
     _pool: &PgPool
 ) -> Result<&str, Error> {
     println!("job_id: {},", job_id);

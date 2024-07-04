@@ -301,19 +301,24 @@ pub async fn save_url_to_internet_archive_urls(
     from_table: &str,
     from_table_id: i32,
     pool: &PgPool) {
-    if let Ok(_)= should_insert_url_to_internet_archive_urls(url, pool).await {
-        let query = r#"
-        INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
-         VALUES ($1, $2, $3, 0, false)"#;
-        sqlx::query(query)
-            .bind(url)
-            .bind(from_table)
-            .bind(from_table_id)
-            .execute(pool)
-            .await
-            .unwrap();
-    } else {
-        return;
+    match should_insert_url_to_internet_archive_urls(url, pool).await {
+        Ok(can_insert) => {
+            if can_insert {
+                let query = r#"
+                            INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
+                            VALUES ($1, $2, $3, 0, false)"#;
+                sqlx::query(query)
+                    .bind(url)
+                    .bind(from_table)
+                    .bind(from_table_id)
+                    .execute(pool)
+                    .await
+                    .unwrap();
+            }
+        }
+        Err(e) => {
+            eprintln!("Error saving {} into internet_archive_urls: {}", url, e)
+        }
     }
 }
 

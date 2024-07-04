@@ -67,16 +67,10 @@ pub async fn poll_db(
             println!("{}", url);
         }
     }
-    // Check ids to start the next poll with, and return them
-    let last_edit_note_row_from_single_poll: Option<&EditNote> = notes.last();
-    let last_edit_data_row_from_single_poll: Option<&EditData> = edits.last();
-    let mut new_edit_id: Option<i32> = None;
-    let mut new_note_id: Option<i32> = None;
-    if last_edit_data_row_from_single_poll.is_some() {
-        new_edit_id = Some(last_edit_data_row_from_single_poll.unwrap().edit + 1);
-    }
-    if last_edit_note_row_from_single_poll.is_some() {
-        new_note_id = Some(last_edit_note_row_from_single_poll.unwrap().id + 1);
-    }
-    Ok((new_edit_id, new_note_id))
+
+    // Return the next ids of the last edit and notes for the next poll
+    Ok((
+        edits.last().map(|edit| edit.edit + 1),
+        notes.last().map(|note| note.id + 1)
+    ))
 }

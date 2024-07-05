@@ -26,14 +26,14 @@ fn test_should_exclude_url() {
 #[test]
 fn test_extract_url_from_json_with_empty_json() {
     let json = json!({});
-    assert_eq!(extract_urls_from_json(&json), Vec::<String>::new());
+    assert_eq!(extract_urls_from_json(&json, 12), Vec::<String>::new());
 }
 
 #[test]
 fn test_extract_url_from_json_with_no_urls_containing_edit() {
     let json = json!({"entity": {"id": 56583, "mbid": "113664a0-3109-42fc-a7a9-0c7473103673", "name": "Whatever Gets You Through the Day"},
             "cover_art_id": 18799571682u64, "cover_art_types": ["3"], "cover_art_comment": "", "cover_art_position": 7, "cover_art_mime_type": "image/jpeg"});
-    assert_eq!(extract_urls_from_json(&json), Vec::<String>::new());
+    assert_eq!(extract_urls_from_json(&json, 32), Vec::<String>::new());
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn test_add_relationship_type0_url() {
            "type0" : "url",
            "type1" : "work"
         });
-    assert_eq!(add_relationship_type0_url(&json), Some("http://lyrics.wikia.com/wiki/Love_And_Rockets:Here_Comes_The_Comedown".to_string()))
+    assert_eq!(extract_url_from_add_relationship(&json), Some("http://lyrics.wikia.com/wiki/Love_And_Rockets:Here_Comes_The_Comedown".to_string()))
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn test_add_relationship_type1_url() {
            "type0" : "release",
            "type1" : "url"
         });
-    assert_eq!(add_relationship_type1_url(&json),Some("https://www.deezer.com/album/49210932".to_string()));
+    assert_eq!(extract_url_from_add_relationship(&json),Some("https://www.deezer.com/album/49210932".to_string()));
 }
 
 #[test]
@@ -211,8 +211,8 @@ fn test_edit_relationship_url() {
            "type1" : "url"
         }
         );
-    assert!(edit_relationship_type0_url(&json_containing_no_url).is_none());
-    assert_eq!(edit_relationship_type1_url(&json_containing_url), Some("https://web.archive.org/web/20141002201130/http://www.mykawartha.com/community-story/3714370-peterbio-james-mckenty/".to_string()))
+    assert!(extract_url_from_edit_relationship(&json_containing_no_url).is_none());
+    assert_eq!(extract_url_from_edit_relationship(&json_containing_url), Some("https://web.archive.org/web/20141002201130/http://www.mykawartha.com/community-story/3714370-peterbio-james-mckenty/".to_string()))
 }
 
 #[test]
@@ -228,7 +228,7 @@ fn test_any_annotations() {
        "old_annotation_id" : 1086953,
        "text" : "This same series gets renamed many times.  At least four examples, likely more.  Always on a cheap reissue label.  The artist is usually missing or madeup.\n\nWIP: Adds a link to this conversation: https://musicbrainz.org/edit/28734798\n\nThat spotted a Countdown Music reference, but there are also some clear links to Russell B going on here too...\n\nFocus is kept on the AcoustIDs links here especically.  It is quite possible Countdown Music bought in some Russell B tracks, or Russell B is being credited to Countdown...  all a tangled mess in cheap compilation re-issue world.\n"
     });
-    assert_eq!(any_annotation(&series_annotation), Some(vec!["https://musicbrainz.org/edit/28734798".to_string()]));
+    assert_eq!(extract_url_from_any_annotation(&series_annotation), Some(vec!["https://musicbrainz.org/edit/28734798".to_string()]));
 }
 
 #[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql", "../../../tests/fixtures/EditNote.sql", "../../../tests/fixtures/EditData.sql" ))]

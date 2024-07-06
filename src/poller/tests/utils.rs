@@ -252,7 +252,7 @@ async fn test_get_edit_data_and_note_start_id_only_edit_data(pool: PgPool) -> Re
         .await
         .unwrap();
     let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await;
-    assert_eq!(last_row_when_no_rows, (1000, 2));
+    assert_eq!(last_row_when_no_rows, (1000, 3));
     Ok(())
 }
 
@@ -264,9 +264,72 @@ async fn test_get_edit_data_and_note_start_id_only_edit_note(pool: PgPool) -> Re
      VALUES ('https://example.com', 'edit_note', 1000, 0, false);
     "#
     ).execute(&pool)
-        .await
-        .unwrap();
+        .await.unwrap();
     let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await;
-    assert_eq!(last_row_when_no_rows, (2, 1000));
+    assert_eq!(last_row_when_no_rows, (3, 1000));
+    Ok(())
+}
+
+#[sqlx::test(fixtures("../../../tests/fixtures/Editor.sql", "../../../tests/fixtures/EditNote.sql"))]
+async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
+    let note_with_no_url = sqlx::query_as::<_, EditNote>(
+        r#"
+            SELECT *
+            FROM edit_note
+            WHERE id = 1
+        "#
+    ).fetch_one(&pool)
+        .await?;
+    let note_with_url = sqlx::query_as::<_, EditNote>(
+        r#"
+            SELECT *
+            FROM edit_note
+            WHERE id = 2
+        "#
+    ).fetch_one(&pool)
+        .await?;
+    let note_with_edit_spammer = sqlx::query_as::<_, EditNote>(
+        r#"
+            SELECT *
+            FROM edit_note
+            WHERE id = 3
+        "#
+    ).fetch_one(&pool)
+        .await?;
+    assert_eq!(extract_url_from_edit_note(&note_with_no_url, &pool).await, Vec::<String>::new());
+    assert_eq!(extract_url_from_edit_note(&note_with_edit_spammer, &pool).await, Vec::<String>::new());
+    assert_eq!(extract_url_from_edit_note(&note_with_url, &pool).await, vec!["https://example.com".to_string()]);
+    Ok(())
+}
+
+#[sqlx::test(fixtures("../../../tests/fixtures/Editor.sql", "../../../tests/fixtures/EditData.sql", "../../../tests/fixtures/Edit.sql"))]
+async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
+    let edit_with_no_url = sqlx::query_as::<_, EditData>(
+        r#"
+            SELECT *
+            FROM edit_data
+            WHERE edit = 3
+        "#
+    ).fetch_one(&pool)
+        .await?;
+    let edit_with_url = sqlx::query_as::<_, EditData>(
+        r#"
+            SELECT *
+            FROM edit_data
+            WHERE edit = 2
+        "#
+    ).fetch_one(&pool)
+        .await?;
+    let edit_with_edit_spammer = sqlx::query_as::<_, EditData>(
+        r#"
+            SELECT *
+            FROM edit_data
+            WHERE edit = 1
+        "#
+    ).fetch_one(&pool)
+        .await?;
+    assert_eq!(extract_url_from_edit_data(&edit_with_edit_spammer, &pool).await, Vec::<String>::new());
+    assert_eq!(extract_url_from_edit_data(&edit_with_no_url, &pool).await, Vec::<String>::new());
+    assert_eq!(extract_url_from_edit_data(&edit_with_url, &pool).await, vec!["https://www.discogs.com/artist/296705".to_string()]);
     Ok(())
 }

@@ -43,14 +43,16 @@ pub async fn poll_db(
 
     println!("Edits ->");
     for edit in &edits {
-        let urls = extract_url_from_edit_data(&edit, pool).await;
+        let urls = extract_url_from_edit_data(edit, pool).await;
         for url in urls {
             save_url_to_internet_archive_urls(
                 url.as_str(),
                 "edit_data",
                 edit.edit,
                 pool
-            ).await;
+            ).await.unwrap_or_else(|e| {
+                eprintln!("Error saving URL from edit: {}: {}", edit.edit, e)
+            });
             println!("{}", url);
         }
     }
@@ -63,7 +65,9 @@ pub async fn poll_db(
                 "edit_note",
                 note.id,
                 pool
-            ).await;
+            ).await.unwrap_or_else(|e| {
+                eprintln!("Error saving URL from edit note: {}: {}", note.id, e)
+            });
             println!("{}", url);
         }
     }

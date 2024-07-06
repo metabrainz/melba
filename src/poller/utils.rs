@@ -12,10 +12,10 @@ use crate::structs::internet_archive_urls::InternetArchiveUrls;
 /// and returns the vector of (URL as String)
 pub async fn extract_url_from_edit_note(note:&EditNote, pool: &PgPool) -> Vec<String> {
     let editor = note.editor;
-    if get_is_editor_spammer(editor, pool).await {
-        return vec![]
+    match get_is_editor_spammer(editor, pool).await {
+        Ok(false) => extract_urls_from_text(note.text.as_str()),
+        _ => Vec::new()
     }
-    extract_urls_from_text(note.text.as_str())
 }
 
 /// This function takes input Edit Data, checks if
@@ -25,11 +25,10 @@ pub async fn extract_url_from_edit_note(note:&EditNote, pool: &PgPool) -> Vec<St
 /// and returns the vector of (URL as String)
 pub async fn extract_url_from_edit_data(edit: &EditData, pool: &PgPool) -> Vec<String> {
     let json: &Value = &edit.data;
-    if let Some(edit_type_if_editor_not_spammer) = get_edit_type_if_editor_is_not_spammer(edit.edit, pool).await {
-        extract_urls_from_json(json, edit_type_if_editor_not_spammer.into())
-    } else {
-        vec![]
-    }
+    get_edit_type_if_editor_is_not_spammer(edit.edit, pool)
+        .await
+        .map(|edit_type| extract_urls_from_json(json, edit_type))
+        .unwrap_or_default()
 }
 
 /// This function takes text and outputs a vector of URLs as string
@@ -46,22 +45,25 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
 
 /// This function takes json and outputs a vector of URL as string
 pub fn extract_urls_from_json(json: &JsonValue, edit_type: i16) -> Vec<String> {
-    return match edit_type {
+    match edit_type {
         90 => {
-            extract_url_from_add_relationship(&json)
-                .map_or_else(|| vec![], |url| vec![url])
+            extract_url_from_add_relationship(json)
+                .map(|url| vec![url])
+                .unwrap_or_default()
         },
         91 => {
-            extract_url_from_edit_relationship(&json)
-                .map_or_else(|| vec![], |url| vec![url])
+            extract_url_from_edit_relationship(json)
+                .map(|url| vec![url])
+                .unwrap_or_default()
         },
         101 => {
-            extract_url_from_edit_url(&json)
-                .map_or_else(|| vec![], |url| vec![url])
+            extract_url_from_edit_url(json)
+                .map(|url| vec![url])
+                .unwrap_or_default()
         },
         _ => {
-            extract_url_from_any_annotation(&json)
-                .map_or_else(|| vec![], |urls| urls)
+            extract_url_from_any_annotation(json)
+                .unwrap_or_default()
         }
     }
 }
@@ -74,13 +76,12 @@ fn extract_url_from_add_relationship(json: &JsonValue) -> Option<String> {
             url = url.replace("\"", "").replace(" ", "");
             return Some(url);
         };
-    } else if json.get("type1") == Some(&json!("url")) {
-        if json.get("entity1").is_some() &&
-            json["entity1"].get("name").is_some() {
-            let mut url = json["entity1"]["name"].to_string();
-            url = url.replace("\"", "").replace(" ", "");
-            return Some(url)
-        }
+    } else if json.get("type1") == Some(&json!("url"))
+        && json.get("entity1").is_some()
+        && json["entity1"].get("name").is_some() {
+        let mut url = json["entity1"]["name"].to_string();
+        url = url.replace("\"", "").replace(" ", "");
+        return Some(url);
     }
     None
 }
@@ -94,16 +95,13 @@ fn extract_url_from_edit_relationship(json: &JsonValue) -> Option<String> {
             url = url.replace("\"", "").replace(" ", "");
             return Some(url);
         }
-    } else if json.get("type1") == Some(&json!("url")) {
-        if json.get("new").is_some()
-            && json["new"].get("entity1").is_some() &&
-            json["new"]["entity1"].get("name").is_some() {
-            let mut url = json["new"]["entity1"]["name"].to_string();
-            url = url.replace("\"", "").replace(" ", "");
-            return Some(url);
-        };
+    } else if json.get("type1") == Some(&json!("url")) && json.get("new").is_some()
+            && json["new"].get("entity1").is_some() && json["new"]["entity1"].get("name").is_some() {
+        let mut url = json["new"]["entity1"]["name"].to_string();
+        url = url.replace(['\"', ' '], "");
+        return Some(url);
     };
-    return None;
+    None
 }
 
 fn extract_url_from_edit_url(json: &JsonValue) -> Option<String> {
@@ -113,7 +111,7 @@ fn extract_url_from_edit_url(json: &JsonValue) -> Option<String> {
         url = url.replace("\"", "").replace(" ", "");
         return Some(url);
     }
-    return None;
+    None
 }
 
 fn extract_url_from_any_annotation(json: &JsonValue) -> Option<Vec<String>> {
@@ -123,32 +121,31 @@ fn extract_url_from_any_annotation(json: &JsonValue) -> Option<Vec<String>> {
             return Some(result)
         };
     }
-    return None;
+    None
 }
 
 /// Returns true if a editor is marked spammer
 pub async fn get_is_editor_spammer(
     editor_id: i32,
     pool: &PgPool
-) -> bool {
+) -> Result<bool, Error> {
     let query = r#"
     SELECT privs & 4096 != 0 as is_editor_spammer
     FROM editor
     WHERE id = $1;
     "#;
-    let (is_editor_spammer, ) = sqlx::query_as::<_, (bool, )>(query)
+    sqlx::query_as::<_, (bool,)>(query)
         .bind(editor_id)
         .fetch_one(pool)
         .await
-        .unwrap();
-    return is_editor_spammer
+        .map(|is_editor_spammer_row| is_editor_spammer_row.0)
 }
 
 /// Returns the edit type if the editor is not spammer, `None` the editor is spammer
 pub async fn get_edit_type_if_editor_is_not_spammer(
     edit_id: i32,
     pool: &PgPool
-) -> Option<i16> {
+) -> Result<i16, Error> {
     let query = r#"
     SELECT edit.type
     FROM edit
@@ -157,17 +154,11 @@ pub async fn get_edit_type_if_editor_is_not_spammer(
     AND (editor.privs & 4096) = 0;
     "#;
 
-    let res = sqlx::query_as::<_, (i16, )>(query)
+    sqlx::query_as::<_, (i16,)>(query)
         .bind(edit_id)
         .fetch_one(pool)
-        .await;
-    match res {
-        Ok((id, )) => { Some(id) }
-        Err(e) => {
-            eprintln!("error: {}", e);
-            None
-        }
-    }
+        .await
+        .map(|edit_type_row| edit_type_row.0)
 }
 
 ///This function fetches the latest row from internet_archive_urls_table
@@ -285,7 +276,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
         .await?;
     if res.is_some() {
         let (bool_val,) = res.unwrap();
-        return Ok(bool_val);
+        Ok(bool_val)
     } else {
         Ok(true)
     }
@@ -295,26 +286,20 @@ pub async fn save_url_to_internet_archive_urls(
     url: &str,
     from_table: &str,
     from_table_id: i32,
-    pool: &PgPool) {
-    match should_insert_url_to_internet_archive_urls(url, pool).await {
-        Ok(can_insert) => {
-            if can_insert {
-                let query = r#"
-                            INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
-                            VALUES ($1, $2, $3, 0, false)"#;
-                sqlx::query(query)
-                    .bind(url)
-                    .bind(from_table)
-                    .bind(from_table_id)
-                    .execute(pool)
-                    .await
-                    .unwrap();
-            }
-        }
-        Err(e) => {
-            eprintln!("Error saving {} into internet_archive_urls: {}", url, e)
-        }
+    pool: &PgPool) -> Result<(), Error> {
+    if !should_insert_url_to_internet_archive_urls(url, pool).await? {
+        return Ok(());
     }
+    let query = r#"
+                    INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
+                    VALUES ($1, $2, $3, 0, false)"#;
+    sqlx::query(query)
+        .bind(url)
+        .bind(from_table)
+        .bind(from_table_id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 #[cfg(test)]

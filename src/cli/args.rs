@@ -19,19 +19,19 @@ pub struct CliArgs {
 pub enum Commands {
     ///Queue a single URL to be archived in Internet Archive History
     QueueURL {
-        url: Option<String>
+        url: Option<String>,
     },
     /// Queue a Edit Data row to be archived in Internet Archive History
     QueueEditData {
-        row_id: Option<i32>
+        row_id: Option<i32>,
     },
     /// Queue a Edit Note row to be archived in Internet Archive History
     QueueEditNote {
-        row_id: Option<i32>
+        row_id: Option<i32>,
     },
     CheckStatus {
-        job_id: Option<String>
+        job_id: Option<String>,
     },
     /// Start the app to poll from Edit Data and Edit Note tables. It is the default behaviour
-    Poll
+    Poll,
 }

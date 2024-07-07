@@ -10,7 +10,7 @@ pub async fn start(pool: &PgPool) {
     let args = CliArgs::parse();
     match &args.command {
         None => {
-            super::app::start(&pool).await.unwrap();
+            super::app::start(pool).await.unwrap();
         }
         Some(Commands::QueueEditData { row_id }) => {
             if row_id.is_none() {
@@ -18,7 +18,7 @@ pub async fn start(pool: &PgPool) {
                 return;
             }
             if let Ok(contains_urls) =
-                utils::insert_edit_data_row_to_internet_archive_urls(row_id.unwrap(), &pool).await
+                utils::insert_edit_data_row_to_internet_archive_urls(row_id.unwrap(), pool).await
             {
                 if contains_urls {
                     println!(
@@ -39,7 +39,7 @@ pub async fn start(pool: &PgPool) {
                 return;
             }
             if let Ok(contains_urls) =
-                utils::insert_edit_note_row_to_internet_archive_urls(row_id.unwrap(), &pool).await
+                utils::insert_edit_note_row_to_internet_archive_urls(row_id.unwrap(), pool).await
             {
                 if contains_urls {
                     println!(
@@ -60,7 +60,7 @@ pub async fn start(pool: &PgPool) {
                 return;
             }
             if let Ok(id) =
-                utils::insert_url_to_internet_archive_urls(url.clone().unwrap(), &pool).await
+                utils::insert_url_to_internet_archive_urls(url.clone().unwrap(), pool).await
             {
                 println!(
                     "{} {}",
@@ -77,12 +77,12 @@ pub async fn start(pool: &PgPool) {
                 return;
             }
             println!("{:?}", job_id);
-            utils::get_job_id_status(job_id.clone().unwrap(), &pool)
+            utils::get_job_id_status(job_id.clone().unwrap(), pool)
                 .await
                 .unwrap();
         }
         Some(Commands::Poll) => {
-            super::app::start(&pool).await.unwrap();
+            super::app::start(pool).await.unwrap();
         }
     }
 }

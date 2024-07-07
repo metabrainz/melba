@@ -3,7 +3,7 @@ use colorize::AnsiColor;
 use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool};
 
-//TODO: Currerently I am returning the internet_archive_urls row id when I insert any URL. Now there might be URLs which are already saved, hence instead of row id, show how many URLs are still there unprocessed, and is before the currently inserted one.
+//TODO: Currently I am returning the internet_archive_urls row id when I insert any URL. Now there might be URLs which are already saved, hence instead of row id, show how many URLs are still there unprocessed, and is before the currently inserted one.
 pub async fn insert_url_to_internet_archive_urls(url: String, pool: &PgPool) -> Result<i32, Error> {
     let id = sqlx::query!(
         r#"

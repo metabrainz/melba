@@ -18,7 +18,7 @@ pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
     .fetch_one(&pool)
     .await;
     if let Ok(last_row) = last_row_result {
-        return Some(last_row.id);
+        Some(last_row.id)
     } else {
         None
     }
@@ -51,7 +51,7 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
         .fetch_one(pool)
         .await;
     match is_row_exists_res {
-        Ok(_) => return true,
+        Ok(_) => true,
         Err(error) => {
             println!("Cannot notify: {:?}", error);
             false

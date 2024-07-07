@@ -8,18 +8,14 @@ pub struct Notifier {
 
 impl Notifier {
     pub async fn new(pool: PgPool) -> Notifier {
-        let last_unarchived_row_from_internet_archive_urls_table =
-            get_first_id_to_start_notifier_from(pool.clone()).await;
-        if last_unarchived_row_from_internet_archive_urls_table.is_some() {
-            println!(
-                "Notifies starts from : {}",
-                last_unarchived_row_from_internet_archive_urls_table.unwrap()
-            );
+        let start_notifier_from = get_first_id_to_start_notifier_from(pool.clone()).await;
+        if start_notifier_from.is_some() {
+            println!("Notifies starts from : {}", start_notifier_from.unwrap());
         }
-        return Notifier {
-            start_notifier_from: last_unarchived_row_from_internet_archive_urls_table,
+        Notifier {
+            start_notifier_from,
             pool,
-        };
+        }
     }
 
     ///`notify` function is called everytime we want to send the URLs from `internet_archive_urls` table to the `listener` task,
@@ -55,11 +51,7 @@ impl Notifier {
     /// Checks if the row to begin notifying from is present in `internet_archive_urls`
     pub async fn should_notify(&mut self) -> bool {
         if self.start_notifier_from.is_some() {
-            if is_row_exists(&self.pool, self.start_notifier_from.unwrap()).await {
-                return true;
-            } else {
-                false
-            }
+            is_row_exists(&self.pool, self.start_notifier_from.unwrap()).await
         } else {
             true
         }

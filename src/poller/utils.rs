@@ -63,7 +63,7 @@ fn extract_url_from_add_relationship(json: &JsonValue) -> Option<String> {
     if json.get("type0") == Some(&json!("url")) {
         if json.get("entity0").is_some() && json["entity0"].get("name").is_some() {
             let mut url = json["entity0"]["name"].to_string();
-            url = url.replace("\"", "").replace(" ", "");
+            url = url.replace(['\"', ' '], "");
             return Some(url);
         };
     } else if json.get("type1") == Some(&json!("url"))
@@ -71,7 +71,7 @@ fn extract_url_from_add_relationship(json: &JsonValue) -> Option<String> {
         && json["entity1"].get("name").is_some()
     {
         let mut url = json["entity1"]["name"].to_string();
-        url = url.replace("\"", "").replace(" ", "");
+        url = url.replace(['\"', ' '], "");
         return Some(url);
     }
     None
@@ -84,7 +84,7 @@ fn extract_url_from_edit_relationship(json: &JsonValue) -> Option<String> {
             && json["new"]["entity0"].get("name").is_some()
         {
             let mut url = json["new"]["entity0"]["name"].to_string();
-            url = url.replace("\"", "").replace(" ", "");
+            url = url.replace(['\"', ' '], "");
             return Some(url);
         }
     } else if json.get("type1") == Some(&json!("url"))
@@ -102,7 +102,7 @@ fn extract_url_from_edit_relationship(json: &JsonValue) -> Option<String> {
 fn extract_url_from_edit_url(json: &JsonValue) -> Option<String> {
     if json.get("new").is_some() && json["new"].get("url").is_some() {
         let mut url = json["new"]["url"].to_string();
-        url = url.replace("\"", "").replace(" ", "");
+        url = url.replace(['\"', ' '], "");
         return Some(url);
     }
     None
@@ -163,17 +163,17 @@ pub async fn get_edit_data_and_note_start_id(pool: &PgPool) -> (i32, i32) {
         ORDER BY from_table, from_table_id DESC;
         "#,
     )
-        .fetch_all(pool)
-        .await;
+    .fetch_all(pool)
+    .await;
     return match last_row {
         Ok(res) => match res.len() {
             1 => {
-                if res.get(0).unwrap().from_table == Some("edit_data".to_string()) {
-                    let edit_data_id = res.get(0).unwrap().from_table_id.unwrap();
+                if res.first().unwrap().from_table == Some("edit_data".to_string()) {
+                    let edit_data_id = res.first().unwrap().from_table_id.unwrap();
                     let edit_note_id = get_latest_edit_note_id(pool).await;
                     (edit_data_id, edit_note_id)
                 } else {
-                    let edit_note_id = res.get(0).unwrap().from_table_id.unwrap();
+                    let edit_note_id = res.first().unwrap().from_table_id.unwrap();
                     let edit_data_id = get_latest_edit_data_id(pool).await;
                     (edit_data_id, edit_note_id)
                 }
@@ -257,11 +257,11 @@ pub async fn should_insert_url_to_internet_archive_urls(
         WHERE url = $1
         "#,
     )
-        .bind(url)
-        .fetch_optional(pool)
-        .await?;
+    .bind(url)
+    .fetch_optional(pool)
+    .await?;
     if res.is_some() {
-        let (bool_val, ) = res.unwrap();
+        let (bool_val,) = res.unwrap();
         Ok(bool_val)
     } else {
         Ok(true)

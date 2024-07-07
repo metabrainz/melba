@@ -1,7 +1,7 @@
-use sqlx::{Error, PgPool};
-use sqlx::postgres::PgListener;
 use crate::archival::utils::update_internet_archive_urls;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
+use sqlx::postgres::PgListener;
+use sqlx::{Error, PgPool};
 
 pub async fn listen(pool: PgPool) -> Result<(), Error> {
     println!("Listener Task");
@@ -10,18 +10,20 @@ pub async fn listen(pool: PgPool) -> Result<(), Error> {
     loop {
         while let Some(notification) = listener.try_recv().await? {
             println!("Notification Payload: {}", notification.payload());
-            let payload: InternetArchiveUrls = serde_json::from_str(notification.payload()).unwrap();
-            archive(payload.id, payload.url.unwrap(), payload.retry_count.unwrap(), &pool).await;
+            let payload: InternetArchiveUrls =
+                serde_json::from_str(notification.payload()).unwrap();
+            archive(
+                payload.id,
+                payload.url.unwrap(),
+                payload.retry_count.unwrap(),
+                &pool,
+            )
+            .await;
         }
     }
 }
 
-pub async fn archive(
-    id: i32,
-    _url: String,
-    _retry_count: i32,
-    pool: &PgPool
-) {
+pub async fn archive(id: i32, _url: String, _retry_count: i32, pool: &PgPool) {
     //TODO: make a reqwest here
     //NOTE: assuming the URL got saved,
     // update the job_id, and is_saved variables of the row

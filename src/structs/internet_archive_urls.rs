@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 // Generated with sql-gen
 // https://github.com/jayy-lmao/sql-gen
+use serde::Deserialize;
 use sqlx::types::chrono;
-use serde::{Deserialize};
 
 #[derive(sqlx::FromRow, Debug, Deserialize)]
 pub struct InternetArchiveUrls {

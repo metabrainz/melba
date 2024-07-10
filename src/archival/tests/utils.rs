@@ -26,7 +26,7 @@ async fn test_get_first_index_to_start_notifier_from(pool: PgPool) -> Result<(),
 
 #[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql"))]
 async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
-    update_internet_archive_urls(&pool, "123abc".to_string(), 4).await;
+    update_internet_archive_urls_with_job_id(&pool, "123abc".to_string(), 4).await?;
     let updated_res = sqlx::query_as::<_, InternetArchiveUrls>(
         r#"
         SELECT * FROM external_url_archiver.internet_archive_urls

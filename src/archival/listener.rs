@@ -1,9 +1,13 @@
-use crate::archival::utils::update_internet_archive_urls;
+use crate::archival::utils::{
+    make_archival_network_request, update_internet_archive_urls_with_job_id,
+    update_internet_archive_urls_with_retry_count_inc,
+};
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
 use sqlx::postgres::PgListener;
-use sqlx::{Error, PgPool};
+use sqlx::PgPool;
+use std::error::Error;
 
-pub async fn listen(pool: PgPool) -> Result<(), Error> {
+pub async fn listen(pool: PgPool) -> Result<(), Box<dyn Error>> {
     println!("Listener Task");
     let mut listener = PgListener::connect_with(&pool).await?;
     listener.listen("archive_urls").await.unwrap();
@@ -18,17 +22,24 @@ pub async fn listen(pool: PgPool) -> Result<(), Error> {
                 payload.retry_count.unwrap(),
                 &pool,
             )
-            .await;
+            .await?;
         }
     }
 }
 
-pub async fn archive(id: i32, _url: String, _retry_count: i32, pool: &PgPool) {
+pub async fn archive(
+    id: i32,
+    url: String,
+    _retry_count: i32,
+    pool: &PgPool,
+) -> Result<(), Box<dyn Error>> {
     //TODO: make a reqwest here
-    //NOTE: assuming the URL got saved,
-    // update the job_id, and is_saved variables of the row
-    // in internet_archive_urls table
-    // Keeping mock job id for now TODO: update it
-    let job_id = "MOCK_JOB_ID".to_string();
-    update_internet_archive_urls(pool, job_id, id).await;
+    match make_archival_network_request(url.as_str()).await {
+        Ok(job_id) => update_internet_archive_urls_with_job_id(pool, job_id, id).await?,
+        Err(e) => {
+            update_internet_archive_urls_with_retry_count_inc(pool, id).await?;
+            println!("Error archiving url {} ,ERROR:  {}", url, e)
+        }
+    }
+    Ok(())
 }

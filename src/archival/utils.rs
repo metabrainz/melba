@@ -1,4 +1,5 @@
-use crate::structs::archival_network_response::{ArchivalErrorResponse, ArchivalSuccessResponse};
+use crate::structs::archival_network_response::{ArchivalHtmlResponse, ArchivalResponse};
+use crate::structs::error::ArchivalError;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
 use reqwest::{header, Client};
 use sqlx::PgPool;
@@ -79,9 +80,7 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
     }
 }
 
-pub async fn make_archival_network_request(
-    url: &str,
-) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn make_archival_network_request(url: &str) -> Result<ArchivalResponse, ArchivalError> {
     let endpoint_url = "https://web.archive.org/save";
     let mut headers = header::HeaderMap::new();
     headers.insert("Accept", "application/json".parse().unwrap());
@@ -105,23 +104,16 @@ pub async fn make_archival_network_request(
         .body(format!("url={}", url))
         .send()
         .await?;
-    let response_status = response.status();
+    // let response_status = response.status();
     let response_text = response.text().await?;
 
-    if let Ok(result_ok) = serde_json::from_str::<ArchivalSuccessResponse>(&response_text) {
-        Ok(result_ok.job_id)
-    } else if let Ok(result_error) = serde_json::from_str::<ArchivalErrorResponse>(&response_text) {
-        Err(Box::from(format!(
-            "WayBack Machine API Error: Status: {}, Message: {}",
-            result_error.status, result_error.message
-        )))
-    } else {
-        Err(Box::from(format!(
-            "Response Error: Status - {}, Message Body: {}",
-            response_status.as_str(),
-            response_text
-        )))
+    if let Ok(res) = serde_json::from_str::<ArchivalResponse>(&response_text) {
+        return Ok(res);
     }
+
+    Ok(ArchivalResponse::Html(ArchivalHtmlResponse {
+        html: response_text,
+    }))
 }
 
 #[cfg(test)]

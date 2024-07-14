@@ -12,3 +12,16 @@ pub struct ArchivalErrorResponse {
     pub status: String,
     pub status_ext: String,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct ArchivalHtmlResponse {
+    pub html: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ArchivalResponse {
+    Ok(ArchivalSuccessResponse),
+    Err(ArchivalErrorResponse),
+    Html(ArchivalHtmlResponse),
+}

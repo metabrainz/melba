@@ -1,6 +1,5 @@
 use crate::archival::utils::{
-    make_archival_network_request, update_internet_archive_urls_with_job_id,
-    update_internet_archive_urls_with_retry_count_inc,
+    inc_archive_request_retry_count, make_archival_network_request, set_job_id_ia_url,
 };
 use crate::structs::archival_network_response::ArchivalResponse;
 use crate::structs::error::ArchivalError;
@@ -34,16 +33,14 @@ pub async fn archive(
     _retry_count: i32,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
-    match make_archival_network_request(url.as_str()).await? {
-        ArchivalResponse::Ok(success) => {
-            update_internet_archive_urls_with_job_id(pool, success.job_id, id).await?
-        }
+    match make_archival_network_request(url.as_str(), "https://web.archive.org/save").await? {
+        ArchivalResponse::Ok(success) => set_job_id_ia_url(pool, success.job_id, id).await?,
         ArchivalResponse::Err(e) => {
-            update_internet_archive_urls_with_retry_count_inc(pool, id).await?;
+            inc_archive_request_retry_count(pool, id).await?;
             println!("Error archiving url {} ,ERROR:  {}", url, e.message)
         }
         ArchivalResponse::Html(response) => {
-            update_internet_archive_urls_with_retry_count_inc(pool, id).await?;
+            inc_archive_request_retry_count(pool, id).await?;
             println!("Error archiving url {}, ERROR: {}", url, response.html)
         }
     }

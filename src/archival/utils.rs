@@ -1,3 +1,4 @@
+use crate::configuration::Settings;
 use crate::structs::archival_network_response::{ArchivalHtmlResponse, ArchivalResponse};
 use crate::structs::error::ArchivalError;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
@@ -77,11 +78,17 @@ pub async fn make_archival_network_request(
     url: &str,
     endpoint_url: &str,
 ) -> Result<ArchivalResponse, ArchivalError> {
+    let settings = Settings::new().expect("Config settings are not configured properly");
     let mut headers = header::HeaderMap::new();
     headers.insert("Accept", "application/json".parse().unwrap());
     headers.insert(
         "Authorization",
-        "LOW iJN8ly6eMroQjKfd:TxLzPGdXKMWvLLuY".parse().unwrap(),
+        format!(
+            "LOW {}:{}",
+            settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+        )
+        .parse()
+        .unwrap(),
     );
     headers.insert(
         "Content-Type",

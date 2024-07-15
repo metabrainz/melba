@@ -52,10 +52,18 @@ async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
 async fn test_make_archival_network_request_success() -> Result<(), ArchivalError> {
     let testing_url = "www.example.com";
     let mut server = mockito::Server::new_async().await;
+    let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "LOW iJN8ly6eMroQjKfd:TxLzPGdXKMWvLLuY")
+        .match_header(
+            "Authorization",
+            format!(
+                "LOW {}:{}",
+                settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+            )
+            .as_str(),
+        )
         .match_header("Content-Type", "application/x-www-form-urlencoded")
         .match_body(format!("url={}", testing_url).as_str())
         .with_body(r#"{"url": "www.example.com", "job_id": "12345" }"#)
@@ -81,9 +89,11 @@ async fn test_make_archival_network_request_success() -> Result<(), ArchivalErro
 async fn test_make_archival_network_request_failure() -> Result<(), ArchivalError> {
     let testing_url_invalid = "www.example.om";
     let mut server = mockito::Server::new_async().await;
-    let mock = server.mock("POST", "/save")
+    let settings = Settings::new().expect("Config settings are not configured properly");
+    let mock = server
+        .mock("POST", "/save")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "LOW iJN8ly6eMroQjKfd:TxLzPGdXKMWvLLuY")
+        .match_header("Authorization", format!("LOW {}:{}", settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret).as_str())
         .match_header("Content-Type", "application/x-www-form-urlencoded")
         .match_body(format!("url={}", testing_url_invalid).as_str())
         .with_body(r#"{"message":"www.example.om URL syntax is not valid.","status":"error","status_ext":"error:invalid-url-syntax"}"#)
@@ -110,10 +120,18 @@ async fn test_make_archival_network_request_failure() -> Result<(), ArchivalErro
 async fn test_make_archival_network_request_html_response() -> Result<(), ArchivalError> {
     let testing_url = "www.example.com";
     let mut server = mockito::Server::new_async().await;
+    let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", "LOW iJN8ly6eMroQjKfd:TxLzPGdXKMWvLLuY")
+        .match_header(
+            "Authorization",
+            format!(
+                "LOW {}:{}",
+                settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+            )
+            .as_str(),
+        )
         .match_header("Content-Type", "application/x-www-form-urlencoded")
         .match_body(format!("url={}", testing_url).as_str())
         .with_body(r#"html response here"#)

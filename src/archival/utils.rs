@@ -28,11 +28,7 @@ pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
 }
 
 /// Updates a row in `internet_archive_urls` table with the `job_id` response received from `Wayback Machine API` request, and marks `is_saved` true.
-pub async fn update_internet_archive_urls_with_job_id(
-    pool: &PgPool,
-    job_id: String,
-    id: i32,
-) -> Result<(), sqlx::Error> {
+pub async fn set_job_id_ia_url(pool: &PgPool, job_id: String, id: i32) -> Result<(), sqlx::Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET
@@ -48,10 +44,7 @@ pub async fn update_internet_archive_urls_with_job_id(
     Ok(())
 }
 
-pub async fn update_internet_archive_urls_with_retry_count_inc(
-    pool: &PgPool,
-    id: i32,
-) -> Result<(), sqlx::Error> {
+pub async fn inc_archive_request_retry_count(pool: &PgPool, id: i32) -> Result<(), sqlx::Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET
@@ -80,8 +73,10 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
     }
 }
 
-pub async fn make_archival_network_request(url: &str) -> Result<ArchivalResponse, ArchivalError> {
-    let endpoint_url = "https://web.archive.org/save";
+pub async fn make_archival_network_request(
+    url: &str,
+    endpoint_url: &str,
+) -> Result<ArchivalResponse, ArchivalError> {
     let mut headers = header::HeaderMap::new();
     headers.insert("Accept", "application/json".parse().unwrap());
     headers.insert(
@@ -104,13 +99,13 @@ pub async fn make_archival_network_request(url: &str) -> Result<ArchivalResponse
         .body(format!("url={}", url))
         .send()
         .await?;
+
     // let response_status = response.status();
     let response_text = response.text().await?;
 
     if let Ok(res) = serde_json::from_str::<ArchivalResponse>(&response_text) {
         return Ok(res);
     }
-
     Ok(ArchivalResponse::Html(ArchivalHtmlResponse {
         html: response_text,
     }))

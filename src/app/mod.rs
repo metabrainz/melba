@@ -20,7 +20,7 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     });
 
     let notify_task_handler = tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        let mut interval = tokio::time::interval(Duration::from_secs(10));
         while !notifier_pool.is_closed() {
             interval.tick().await;
             let notifier = Arc::clone(&notifier);

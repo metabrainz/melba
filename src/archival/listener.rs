@@ -16,13 +16,16 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
             println!("Notification Payload: {}", notification.payload());
             let payload: InternetArchiveUrls =
                 serde_json::from_str(notification.payload()).unwrap();
-            archive(
+            if let Err(e) = archive(
                 payload.id,
                 payload.url.unwrap(),
                 payload.retry_count.unwrap(),
                 &pool,
             )
-            .await?;
+            .await
+            {
+                eprintln!("Archival Error: {}", e)
+            }
         }
     }
 }

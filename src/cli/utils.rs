@@ -19,6 +19,7 @@ pub async fn insert_url_to_internet_archive_urls(url: String, pool: &PgPool) -> 
     Ok(id)
 }
 
+/// This function takes in an `edit_data` `row_id`, extract the urls contained inside, then insert them into the `internet_archive_urls` table
 pub async fn insert_edit_data_row_to_internet_archive_urls(
     row_id: i32,
     pool: &PgPool,
@@ -52,6 +53,7 @@ pub async fn insert_edit_data_row_to_internet_archive_urls(
     Ok(!urls.is_empty())
 }
 
+/// This function takes in an `edit_note` `row_id`, extract the urls contained inside, then insert them into the `internet_archive_urls` table
 pub async fn insert_edit_note_row_to_internet_archive_urls(
     row_id: i32,
     pool: &PgPool,

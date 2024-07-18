@@ -48,7 +48,7 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
 /// Depending on the type of edit data, it will give one or many urls:
 ///  - "Add" and "edit" edits will give 1 url, as the edit concern a 1:1 relation between an entity and an Url
 ///  - Annotations provide multiple Urls as it is arbitrary text made by the editor.
-/// 
+///
 /// The input edit data is in [`JsonValue`] form.
 pub fn extract_urls_from_json(json: &JsonValue, edit_type: i16) -> Vec<String> {
     match edit_type {

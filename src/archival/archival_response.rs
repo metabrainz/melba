@@ -25,3 +25,13 @@ pub enum ArchivalResponse {
     Err(ArchivalErrorResponse),
     Html(ArchivalHtmlResponse),
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+pub struct ArchivalStatusResponse {
+    pub duration_sec: Option<f64>,
+    pub http_status: Option<i64>,
+    pub job_id: String,
+    pub original_url: String,
+    pub status: String,
+    pub timestamp: Option<String>,
+}

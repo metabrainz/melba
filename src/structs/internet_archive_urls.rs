@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 // Generated with sql-gen
 // https://github.com/jayy-lmao/sql-gen
 use serde::Deserialize;
@@ -14,4 +13,5 @@ pub struct InternetArchiveUrls {
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub retry_count: Option<i32>,
     pub is_saved: Option<bool>,
+    pub status: Option<String>,
 }

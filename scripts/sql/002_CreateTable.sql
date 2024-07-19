@@ -6,5 +6,6 @@ CREATE TABLE external_url_archiver.internet_archive_urls (
         from_table_id       INTEGER, -- id of the row from where the URL is taken
         created_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         retry_count         INTEGER, -- keeps track of number of retries made for the URL
-        is_saved            boolean
+        is_saved            boolean,
+        status              text -- keeps the status of archival of URL
 );

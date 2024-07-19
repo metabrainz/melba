@@ -1,5 +1,6 @@
 use crate::archival::utils::{
-    inc_archive_request_retry_count, make_archival_network_request, set_job_id_ia_url,
+    inc_archive_request_retry_count, make_archival_network_request, schedule_status_check,
+    set_job_id_ia_url,
 };
 use crate::structs::archival_network_response::ArchivalResponse;
 use crate::structs::error::ArchivalError;
@@ -16,14 +17,7 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
             println!("Notification Payload: {}", notification.payload());
             let payload: InternetArchiveUrls =
                 serde_json::from_str(notification.payload()).unwrap();
-            if let Err(e) = archive(
-                payload.id,
-                payload.url.unwrap(),
-                payload.retry_count.unwrap(),
-                &pool,
-            )
-            .await
-            {
+            if let Err(e) = archive(payload, &pool).await {
                 eprintln!("Archival Error: {}", e)
             }
         }
@@ -31,13 +25,29 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
 }
 
 pub async fn archive(
-    id: i32,
-    url: String,
-    _retry_count: i32,
+    internet_archive_urls_row: InternetArchiveUrls,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
+    let url = internet_archive_urls_row.url.unwrap();
+    let id = internet_archive_urls_row.id;
     match make_archival_network_request(url.as_str(), "https://web.archive.org/save").await? {
-        ArchivalResponse::Ok(success) => set_job_id_ia_url(pool, success.job_id, id).await?,
+        ArchivalResponse::Ok(success) => {
+            set_job_id_ia_url(pool, success.job_id.clone(), id).await?;
+            let job_id = success.job_id.clone();
+            let status_pool = pool.clone();
+            tokio::spawn(async move {
+                if let Err(e) = schedule_status_check(
+                    job_id,
+                    "https://web.archive.org/save/status",
+                    id,
+                    status_pool,
+                )
+                .await
+                {
+                    eprintln!("Error checking status: {}", e);
+                }
+            });
+        }
         ArchivalResponse::Err(e) => {
             inc_archive_request_retry_count(pool, id).await?;
             println!("Error archiving url {} ,ERROR:  {}", url, e.message)

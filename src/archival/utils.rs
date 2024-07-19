@@ -1,9 +1,13 @@
 use crate::configuration::Settings;
-use crate::structs::archival_network_response::{ArchivalHtmlResponse, ArchivalResponse};
+use crate::structs::archival_network_response::{
+    ArchivalHtmlResponse, ArchivalResponse, ArchivalStatusResponse,
+};
 use crate::structs::error::ArchivalError;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
 use reqwest::{header, Client};
-use sqlx::PgPool;
+use sqlx::{Error, PgPool};
+use std::time::Duration;
+use tokio::time;
 
 ///This function is used to find the row in internet_archive_urls from where we can start the archival task
 /// The notify function will start picking URLs from the returned row id
@@ -116,6 +120,104 @@ pub async fn make_archival_network_request(
     Ok(ArchivalResponse::Html(ArchivalHtmlResponse {
         html: response_text,
     }))
+}
+
+pub async fn make_archival_status_request(
+    job_id: &str,
+    endpoint_url: &str,
+) -> Result<ArchivalStatusResponse, ArchivalError> {
+    let settings = Settings::new().expect("Config settings are not configured properly");
+    let mut headers = header::HeaderMap::new();
+    headers.insert("Accept", "application/json".parse().unwrap());
+    headers.insert(
+        "Authorization",
+        format!(
+            "LOW {}:{}",
+            settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+        )
+        .parse()
+        .unwrap(),
+    );
+    headers.insert(
+        "Content-Type",
+        "application/x-www-form-urlencoded".parse().unwrap(),
+    );
+
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap();
+    let response = client
+        .post(endpoint_url)
+        .headers(headers)
+        .body(format!("job_id={}", job_id))
+        .send()
+        .await?;
+    // let response_status = response.status();
+    let response_text = response.text().await?;
+
+    let res = serde_json::from_str::<ArchivalStatusResponse>(&response_text)?;
+    Ok(res)
+}
+
+pub async fn schedule_status_check(
+    job_id: String,
+    endpoint_url: &str,
+    id: i32,
+    pool: PgPool,
+) -> Result<(), ArchivalError> {
+    for attempt in 1..=3 {
+        time::sleep(Duration::from_secs(120)).await;
+        match make_archival_status_request(job_id.as_str(), endpoint_url).await {
+            Ok(status_response) => {
+                if status_response.status == "success" {
+                    set_status_in_database(&pool, id, status_response.status).await?;
+                    return Ok(());
+                } else if status_response.status == "pending" {
+                    println!(
+                        "Job {} is still pending. Time: {:?}",
+                        job_id,
+                        chrono::Utc::now()
+                    );
+                } else {
+                    println!(
+                        "Job {} returned status '{}', retry count : {}",
+                        job_id, status_response.status, attempt
+                    );
+                }
+            }
+            Err(e) => {
+                eprintln!("Error making status check request: {}", e);
+            }
+        }
+    }
+
+    // After 3 attempts, if still not success, update the status with the last response or Error
+    match make_archival_status_request(job_id.as_str(), endpoint_url).await {
+        Ok(status_response) => {
+            set_status_in_database(&pool, id, status_response.status).await?;
+        }
+        Err(e) => {
+            set_status_in_database(&pool, id, format!("Error: Could not save: {:?}", e)).await?;
+            eprintln!("Error making final status check request: {}", e);
+        }
+    }
+    Ok(())
+}
+
+pub async fn set_status_in_database(pool: &PgPool, id: i32, status: String) -> Result<(), Error> {
+    let query = r#"
+        UPDATE external_url_archiver.internet_archive_urls
+        SET
+        status = $1
+        WHERE id = $2
+        "#;
+    sqlx::query(query)
+        .bind(status)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 #[cfg(test)]

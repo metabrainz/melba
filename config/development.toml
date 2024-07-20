@@ -1,5 +1,9 @@
 debug = true
 
 [wayback_machine_api]
-myaccesskey = "iJN8ly6eMroQjKfd"
-mysecret =  "TxLzPGdXKMWvLLuY"
+myaccesskey = "XfNaisRR7DPZzfXb"
+mysecret =  "D08VtriL9Whr6Ydq"
+
+[retry_task]
+retry_interval = 120 # 2 min
+allow_remove_row_after = 300 # 5 min

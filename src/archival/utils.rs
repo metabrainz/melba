@@ -33,7 +33,7 @@ pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
 }
 
 /// Updates a row in `internet_archive_urls` table with the `job_id` response received from `Wayback Machine API` request, and marks `is_saved` true.
-pub async fn set_job_id_ia_url(pool: &PgPool, job_id: String, id: i32) -> Result<(), sqlx::Error> {
+pub async fn set_job_id_ia_url(pool: &PgPool, job_id: String, id: i32) -> Result<(), Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET
@@ -49,7 +49,7 @@ pub async fn set_job_id_ia_url(pool: &PgPool, job_id: String, id: i32) -> Result
     Ok(())
 }
 
-pub async fn inc_archive_request_retry_count(pool: &PgPool, id: i32) -> Result<(), sqlx::Error> {
+pub async fn inc_archive_request_retry_count(pool: &PgPool, id: i32) -> Result<(), Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET
@@ -156,8 +156,12 @@ pub async fn make_archival_status_request(
     // let response_status = response.status();
     let response_text = response.text().await?;
 
-    let res = serde_json::from_str::<ArchivalStatusResponse>(&response_text)?;
-    Ok(res)
+    if let Ok(res) = serde_json::from_str::<ArchivalStatusResponse>(&response_text) {
+        return Ok(res);
+    }
+    Ok(ArchivalStatusResponse::Html(ArchivalHtmlResponse {
+        html: response_text,
+    }))
 }
 
 pub async fn schedule_status_check(
@@ -166,10 +170,15 @@ pub async fn schedule_status_check(
     id: i32,
     pool: PgPool,
 ) -> Result<(), ArchivalError> {
+    let settings = Settings::new().expect("Config settings are not configured properly");
+
     for attempt in 1..=3 {
-        time::sleep(Duration::from_secs(120)).await;
-        match make_archival_status_request(job_id.as_str(), endpoint_url).await {
-            Ok(status_response) => {
+        time::sleep(Duration::from_secs(
+            settings.listen_task.sleep_status_interval,
+        ))
+        .await;
+        match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
+            ArchivalStatusResponse::Ok(status_response) => {
                 if status_response.status == "success" {
                     set_status_in_database(&pool, id, status_response.status).await?;
                     return Ok(());
@@ -186,20 +195,35 @@ pub async fn schedule_status_check(
                     );
                 }
             }
-            Err(e) => {
-                eprintln!("Error making status check request: {}", e);
+            ArchivalStatusResponse::Err(e) => {
+                eprintln!("Error making status check request: {:?}", e)
+            }
+            ArchivalStatusResponse::Html(message) => {
+                println!(
+                    "Job {} cannot be checked for status. Response message: {}",
+                    job_id, message.html
+                )
             }
         }
     }
 
     // After 3 attempts, if still not success, update the status with the last response or Error
-    match make_archival_status_request(job_id.as_str(), endpoint_url).await {
-        Ok(status_response) => {
+    match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
+        ArchivalStatusResponse::Ok(status_response) => {
             set_status_in_database(&pool, id, status_response.status).await?;
         }
-        Err(e) => {
+        ArchivalStatusResponse::Err(e) => {
             set_status_in_database(&pool, id, format!("Error: Could not save: {:?}", e)).await?;
-            eprintln!("Error making final status check request: {}", e);
+            eprintln!("Error making final status check request: {:?}", e)
+        }
+        ArchivalStatusResponse::Html(message) => {
+            set_status_in_database(
+                &pool,
+                id,
+                format!("Error: Could not save: {}", message.html),
+            )
+            .await?;
+            eprintln!("Error making final status check request: {}", message.html)
         }
     }
     Ok(())

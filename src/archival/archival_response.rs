@@ -27,11 +27,25 @@ pub enum ArchivalResponse {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
-pub struct ArchivalStatusResponse {
+pub struct ArchivalStatusSuccessResponse {
     pub duration_sec: Option<f64>,
     pub http_status: Option<i64>,
     pub job_id: String,
-    pub original_url: String,
+    pub original_url: Option<String>,
     pub status: String,
     pub timestamp: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+pub struct ArchivalStatusErrorResponse {
+    pub job_id: String,
+    pub message: String,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum ArchivalStatusResponse {
+    Ok(ArchivalStatusSuccessResponse),
+    Err(ArchivalStatusErrorResponse),
+    Html(ArchivalHtmlResponse),
 }

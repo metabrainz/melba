@@ -3,7 +3,7 @@
 use serde::Deserialize;
 use sqlx::types::chrono;
 
-#[derive(sqlx::FromRow, Debug, Deserialize)]
+#[derive(sqlx::FromRow, Debug, Deserialize, Clone)]
 pub struct InternetArchiveUrls {
     pub id: i32,
     pub url: Option<String>,

@@ -39,7 +39,9 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     });
 
     let listener_task_handler = tokio::spawn(async move {
-        archival::listener::listen(listener_pool).await.unwrap();
+        archival::listener::listen(listener_pool)
+            .await
+            .map_err(|e| eprintln!("Listener Task Error {}", e))
     });
 
     let retry_and_cleanup_task_handler = tokio::spawn(async move {

@@ -1,6 +1,6 @@
 use crate::archival::utils::{
     inc_archive_request_retry_count, make_archival_network_request, schedule_status_check,
-    set_job_id_ia_url,
+    set_job_id_ia_url, set_status,
 };
 
 use crate::archival::archival_response::ArchivalResponse;
@@ -8,10 +8,11 @@ use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
 use sqlx::postgres::PgListener;
-use sqlx::{Error, PgPool};
+use sqlx::PgPool;
 use std::time::Duration;
 use tokio::time;
 
+/// Listens to the `archive_urls` postgres channel
 pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
     println!("Listener Task");
 
@@ -30,10 +31,11 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
     }
 }
 
+/// Handle what to do with the URL, based on the retry count, either we try to archive, save as failed, or increment the retry count
 pub async fn handle_payload(url: InternetArchiveUrls, pool: &PgPool) -> Result<(), ArchivalError> {
     let id = url.id;
     if url.retry_count >= Some(3) {
-        save_failed_url(id, pool).await?;
+        set_status(pool, id, "Failed".to_string()).await?;
     } else if let Err(e) = archive(url, pool).await {
         eprintln!("Archival Error: {}", e);
         inc_archive_request_retry_count(pool, id).await?;
@@ -41,17 +43,7 @@ pub async fn handle_payload(url: InternetArchiveUrls, pool: &PgPool) -> Result<(
     Ok(())
 }
 
-pub async fn save_failed_url(id: i32, pool: &PgPool) -> Result<(), Error> {
-    let query = r#"
-        UPDATE external_url_archiver.internet_archive_urls
-        SET
-        status = 'failed'
-        WHERE id = $1
-        "#;
-    sqlx::query(query).bind(id).execute(pool).await?;
-    Ok(())
-}
-
+/// Send archival request, and schedule a status check request after `sleep_status_interval` seconds
 pub async fn archive(
     internet_archive_urls_row: InternetArchiveUrls,
     pool: &PgPool,

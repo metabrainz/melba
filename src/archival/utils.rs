@@ -78,6 +78,7 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
     }
 }
 
+///Handles the network request to archive the URL
 pub async fn make_archival_network_request(
     url: &str,
     endpoint_url: &str,
@@ -122,6 +123,7 @@ pub async fn make_archival_network_request(
     }))
 }
 
+///Checks the status of `job_id` of a URL
 pub async fn make_archival_status_request(
     job_id: &str,
     endpoint_url: &str,
@@ -164,6 +166,7 @@ pub async fn make_archival_status_request(
     }))
 }
 
+///Schedules the status check of a URL's `job_id`, and
 pub async fn schedule_status_check(
     job_id: String,
     endpoint_url: &str,
@@ -180,7 +183,7 @@ pub async fn schedule_status_check(
         match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
             ArchivalStatusResponse::Ok(status_response) => {
                 if status_response.status == "success" {
-                    set_status_in_database(&pool, id, status_response.status).await?;
+                    set_status(&pool, id, status_response.status).await?;
                     return Ok(());
                 } else if status_response.status == "pending" {
                     println!(
@@ -200,7 +203,7 @@ pub async fn schedule_status_check(
             }
             ArchivalStatusResponse::Html(message) => {
                 println!(
-                    "Job {} cannot be checked for status. Response message: {}",
+                    "Internet Archive cannot archive currently, job {} cannot be checked for status. Response message: {}",
                     job_id, message.html
                 )
             }
@@ -210,14 +213,14 @@ pub async fn schedule_status_check(
     // After 3 attempts, if still not success, update the status with the last response or Error
     match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
         ArchivalStatusResponse::Ok(status_response) => {
-            set_status_in_database(&pool, id, status_response.status).await?;
+            set_status(&pool, id, status_response.status).await?;
         }
         ArchivalStatusResponse::Err(e) => {
-            set_status_in_database(&pool, id, format!("Error: Could not save: {:?}", e)).await?;
+            set_status(&pool, id, format!("Error: Could not save: {:?}", e)).await?;
             eprintln!("Error making final status check request: {:?}", e)
         }
         ArchivalStatusResponse::Html(message) => {
-            set_status_in_database(
+            set_status(
                 &pool,
                 id,
                 format!("Error: Could not save: {}", message.html),
@@ -229,7 +232,7 @@ pub async fn schedule_status_check(
     Ok(())
 }
 
-pub async fn set_status_in_database(pool: &PgPool, id: i32, status: String) -> Result<(), Error> {
+pub async fn set_status(pool: &PgPool, id: i32, status: String) -> Result<(), Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET

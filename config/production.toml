@@ -3,3 +3,6 @@ debug = false
 [wayback_machine_api]
 myaccesskey = "wayback-machine-access-key"
 mysecret =  "wayback-machine-secret"
+
+[sentry]
+url = "enter your project url"

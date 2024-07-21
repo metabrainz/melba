@@ -7,3 +7,6 @@ mysecret =  "D08VtriL9Whr6Ydq"
 [retry_task]
 retry_interval = 120 # 2 min
 allow_remove_row_after = 300 # 5 min
+
+[sentry]
+url = "enter your project url"

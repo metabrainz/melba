@@ -1,4 +1,5 @@
-use config::{Config, ConfigError, File};
+use config::{Config, ConfigError, Environment, File};
+use dotenv::dotenv;
 use serde::Deserialize;
 use std::env;
 
@@ -32,20 +33,28 @@ pub struct ListenTask {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Sentry {
+    pub url: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Settings {
     pub wayback_machine_api: WaybackMachineApi,
     pub retry_task: RetryTask,
     pub poller_task: PollerTask,
     pub notify_task: NotifyTask,
     pub listen_task: ListenTask,
+    pub sentry: Sentry,
 }
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
+        dotenv().ok();
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
         let config = Config::builder()
             .add_source(File::with_name("config/default"))
             .add_source(File::with_name(&format!("config/{}", run_mode)).required(false))
+            .add_source(Environment::default().separator("_"))
             .build()?;
         config.try_deserialize()
     }

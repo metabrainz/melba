@@ -16,7 +16,6 @@ pub static REQWEST_CLIENT: Lazy<Arc<Client>> = Lazy::new(|| {
         .parse()
         .unwrap(),
     );
-    println!("www {:?}", settings);
     headers.insert(
         "Content-Type",
         "application/x-www-form-urlencoded".parse().unwrap(),

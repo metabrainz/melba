@@ -1,8 +1,9 @@
 use crate::archival::utils::{
     inc_archive_request_retry_count, make_archival_network_request, set_job_id_ia_url,
 };
-use crate::structs::archival_network_response::ArchivalResponse;
-use crate::structs::error::ArchivalError;
+
+use crate::archival::archival_response::ArchivalResponse;
+use crate::archival::error::ArchivalError;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
 use sqlx::postgres::PgListener;
 use sqlx::PgPool;

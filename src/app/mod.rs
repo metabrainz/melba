@@ -32,6 +32,7 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
             if notifier.should_notify().await {
                 println!("Notifying...");
                 if let Err(e) = notifier.notify().await {
+                    sentry::capture_error(&e);
                     eprintln!("Notify failed, error: {}", e)
                 };
             }
@@ -41,7 +42,10 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     let listener_task_handler = tokio::spawn(async move {
         archival::listener::listen(listener_pool)
             .await
-            .map_err(|e| eprintln!("Listener Task Error {}", e))
+            .map_err(|e| {
+                sentry::capture_error(&e);
+                eprintln!("Listener Task Error {}", e)
+            })
     });
 
     let retry_and_cleanup_task_handler = tokio::spawn(async move {
@@ -49,8 +53,9 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
             tokio::time::interval(Duration::from_secs(settings.retry_task.retry_interval));
         while !retry_task_pool.is_closed() {
             interval.tick().await;
-            println!("Retrying and Cleanup Task Starting...");
+            sentry::capture_message("Retry and Cleanup Task started", sentry::Level::Info);
             if let Err(e) = archival::retry::start(retry_task_pool.clone()).await {
+                sentry::capture_error(&e);
                 eprintln!("Retry and Cleanup Task failed, error: {}", e)
             }
         }

@@ -46,7 +46,10 @@ impl Poller {
                     }
                 }
                 Err(e) => {
-                    eprintln!("Problem polling {}", e)
+                    sentry::capture_message(
+                        format!("Cannot poll edit data and edit notes, due to: {}", e).as_str(),
+                        sentry::Level::Warning,
+                    );
                 }
             }
         }

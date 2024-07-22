@@ -1436,6 +1436,7 @@ dependencies = [
  "linkify",
  "mb-rs",
  "mockito",
+ "once_cell",
  "reqwest",
  "serde",
  "serde_json",

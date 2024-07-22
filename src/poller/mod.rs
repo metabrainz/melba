@@ -2,6 +2,7 @@ mod looper;
 pub mod utils;
 
 use crate::poller::utils::get_edit_data_and_note_start_id;
+use sqlx::Error;
 use std::time::Duration;
 use tokio::time::interval;
 
@@ -26,7 +27,7 @@ impl Poller {
     }
 
     /// Polls the `edit_data` and `edit_note` tables continuously
-    pub async fn poll(&mut self) {
+    pub async fn poll(&mut self) -> Result<(), Error> {
         let mut interval = interval(Duration::from_secs(self.poll_interval));
         loop {
             interval.tick().await;
@@ -46,10 +47,7 @@ impl Poller {
                     }
                 }
                 Err(e) => {
-                    sentry::capture_message(
-                        format!("Cannot poll edit data and edit notes, due to: {}", e).as_str(),
-                        sentry::Level::Warning,
-                    );
+                    return Err(e);
                 }
             }
         }

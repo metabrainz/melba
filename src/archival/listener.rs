@@ -14,8 +14,6 @@ use tokio::time;
 
 /// Listens to the `archive_urls` postgres channel
 pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
-    println!("Listener Task");
-
     let settings = Settings::new().expect("Config settings not configured properly");
 
     let mut listener = PgListener::connect_with(&pool).await?;
@@ -24,8 +22,7 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
         while let Some(notification) = listener.try_recv().await? {
             time::sleep(Duration::from_secs(settings.listen_task.listen_interval)).await;
             println!("Notification Payload: {}", notification.payload());
-            let payload: InternetArchiveUrls =
-                serde_json::from_str(notification.payload()).unwrap();
+            let payload: InternetArchiveUrls = serde_json::from_str(notification.payload())?;
             handle_payload(payload, &pool).await?
         }
     }
@@ -58,15 +55,15 @@ pub async fn archive(
             let job_id = success.job_id.clone();
             let status_pool = pool.clone();
             tokio::spawn(async move {
-                if let Err(e) = schedule_status_check(
+                let schedule_status_check_result = schedule_status_check(
                     job_id,
                     "https://web.archive.org/save/status",
                     id,
                     status_pool,
                 )
-                .await
-                {
-                    eprintln!("Error checking status: {}", e);
+                .await;
+                if let Err(e) = schedule_status_check_result {
+                    sentry::capture_error(&e);
                 }
             });
         }
@@ -79,7 +76,11 @@ pub async fn archive(
             println!(
                 "Internet Archive cannot archive currently {}, due to: {}",
                 url, response.html
-            )
+            );
+            sentry::capture_message(
+                format!("Internet Archive is Not Working, {}", response.html).as_str(),
+                sentry::Level::Warning,
+            );
         }
     }
     Ok(())

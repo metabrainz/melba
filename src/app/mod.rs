@@ -19,7 +19,12 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     let notifier = Arc::new(Mutex::new(Notifier::new(pool.clone()).await));
 
     let poll_task_handler = tokio::spawn(async move {
-        poller.poll().await;
+        if let Err(e) = poller.poll().await {
+            sentry::capture_message(
+                format!("Cannot poll edit data and edit notes, due to: {}", e).as_str(),
+                sentry::Level::Warning,
+            );
+        }
     });
 
     let notify_task_handler = tokio::spawn(async move {
@@ -54,9 +59,18 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
         while !retry_task_pool.is_closed() {
             interval.tick().await;
             sentry::capture_message("Retry and Cleanup Task started", sentry::Level::Info);
-            if let Err(e) = archival::retry::start(retry_task_pool.clone()).await {
-                sentry::capture_error(&e);
-                eprintln!("Retry and Cleanup Task failed, error: {}", e)
+            let archival_retry_task = archival::retry::start(retry_task_pool.clone()).await;
+            match archival_retry_task {
+                Ok(_) => {
+                    sentry::capture_message(
+                        "Retry and Cleanup Task Completed",
+                        sentry::Level::Info,
+                    );
+                }
+                Err(e) => {
+                    sentry::capture_error(&e);
+                    eprintln!("Retry and Cleanup Task failed, error: {}", e)
+                }
             }
         }
     });

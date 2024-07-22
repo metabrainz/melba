@@ -26,11 +26,7 @@ pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
     )
     .fetch_one(&pool)
     .await;
-    if let Ok(last_row) = last_row_result {
-        Some(last_row.id)
-    } else {
-        None
-    }
+    last_row_result.map(|last_row| last_row.id).ok()
 }
 
 /// Updates a row in `internet_archive_urls` table with the `job_id` response received from `Wayback Machine API` request, and marks `is_saved` true.
@@ -162,7 +158,11 @@ pub async fn schedule_status_check(
                 println!(
                     "Internet Archive cannot archive currently, job {} cannot be checked for status. Response message: {}",
                     job_id, message.html
-                )
+                );
+                sentry::capture_message(
+                    format!("Internet Archive is Not Working, {}", message.html).as_str(),
+                    sentry::Level::Warning,
+                );
             }
         }
     }

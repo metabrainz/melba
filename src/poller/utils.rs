@@ -266,12 +266,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
     .bind(url)
     .fetch_optional(pool)
     .await?;
-    if res.is_some() {
-        let (bool_val,) = res.unwrap();
-        Ok(bool_val)
-    } else {
-        Ok(true)
-    }
+    Ok(res.map(|(daydiff,)| daydiff).unwrap_or(true))
 }
 
 pub async fn save_url_to_internet_archive_urls(

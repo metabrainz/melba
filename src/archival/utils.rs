@@ -1,11 +1,12 @@
-use crate::archival::archival_response::{ArchivalHtmlResponse, ArchivalResponse, ArchivalStatusResponse};
+use crate::archival::archival_response::{
+    ArchivalHtmlResponse, ArchivalResponse, ArchivalStatusResponse,
+};
 use crate::archival::client::REQWEST_CLIENT;
 use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
 use crate::structs::internet_archive_urls::InternetArchiveUrls;
-use std::sync::Arc;
-use reqwest::{header, Client};
 use sqlx::{Error, PgPool};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time;
 
@@ -105,30 +106,9 @@ pub async fn make_archival_status_request(
     job_id: &str,
     endpoint_url: &str,
 ) -> Result<ArchivalStatusResponse, ArchivalError> {
-    let settings = Settings::new().expect("Config settings are not configured properly");
-    let mut headers = header::HeaderMap::new();
-    headers.insert("Accept", "application/json".parse().unwrap());
-    headers.insert(
-        "Authorization",
-        format!(
-            "LOW {}:{}",
-            settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
-        )
-        .parse()
-        .unwrap(),
-    );
-    headers.insert(
-        "Content-Type",
-        "application/x-www-form-urlencoded".parse().unwrap(),
-    );
-
-    let client = Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .unwrap();
+    let client = Arc::clone(&REQWEST_CLIENT);
     let response = client
         .post(endpoint_url)
-        .headers(headers)
         .body(format!("job_id={}", job_id))
         .send()
         .await?;

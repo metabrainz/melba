@@ -1,6 +1,7 @@
 use super::*;
-use crate::structs::archival_network_response::ArchivalErrorResponse;
-use crate::structs::archival_network_response::ArchivalSuccessResponse;
+use crate::archival::archival_response::ArchivalErrorResponse;
+use crate::archival::archival_response::ArchivalSuccessResponse;
+use crate::configuration::Settings;
 use sqlx::Error;
 
 #[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql"))]

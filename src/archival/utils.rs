@@ -9,6 +9,16 @@ use sqlx::{Error, PgPool};
 use std::time::Duration;
 use tokio::time;
 
+#[cfg(not(test))]
+const SAVE_ENDPOINT_URL: &str = "https://web.archive.org/save";
+#[cfg(not(test))]
+const STATUS_ENDPOINT_URL: &str = "https://web.archive.org/save/status";
+
+#[cfg(test)]
+const SAVE_ENDPOINT_URL: &str = "http://127.0.0.1:1234/save";
+#[cfg(test)]
+const STATUS_ENDPOINT_URL: &str = "http://127.0.0.1:1235/status";
+
 ///This function is used to find the row in internet_archive_urls from where we can start the archival task
 /// The notify function will start picking URLs from the returned row id
 /// - returns `None` if no rows are present in the table
@@ -75,13 +85,10 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
 }
 
 ///Handles the network request to archive the URL
-pub async fn make_archival_network_request(
-    url: &str,
-    endpoint_url: &str,
-) -> Result<ArchivalResponse, ArchivalError> {
+pub async fn make_archival_network_request(url: &str) -> Result<ArchivalResponse, ArchivalError> {
     let client = &REQWEST_CLIENT;
     let response = client
-        .post(endpoint_url)
+        .post(SAVE_ENDPOINT_URL)
         .body(format!("url={}", url))
         .send()
         .await?;
@@ -99,11 +106,10 @@ pub async fn make_archival_network_request(
 ///Checks the status of `job_id` of a URL
 pub async fn make_archival_status_request(
     job_id: &str,
-    endpoint_url: &str,
 ) -> Result<ArchivalStatusResponse, ArchivalError> {
     let client = &REQWEST_CLIENT;
     let response = client
-        .post(endpoint_url)
+        .post(STATUS_ENDPOINT_URL)
         .body(format!("job_id={}", job_id))
         .send()
         .await?;
@@ -121,7 +127,6 @@ pub async fn make_archival_status_request(
 ///Schedules the status check of a URL's `job_id`, and
 pub async fn schedule_status_check(
     job_id: String,
-    endpoint_url: &str,
     id: i32,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
@@ -141,7 +146,7 @@ pub async fn schedule_status_check(
             settings.listen_task.sleep_status_interval,
         ))
         .await;
-        match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
+        match make_archival_status_request(job_id.as_str()).await? {
             ArchivalStatusResponse::Ok(status_response) => {
                 if status_response.status == "success" {
                     set_status_with_message(

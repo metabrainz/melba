@@ -59,20 +59,15 @@ pub async fn handle_payload(
 
 /// Send archival request, and schedule a status check request after `sleep_status_interval` seconds
 pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), ArchivalError> {
-    match make_archival_network_request(url.as_str(), "https://web.archive.org/save").await? {
+    match make_archival_network_request(url.as_str()).await? {
         // If the response contains job id, we check for status
         ArchivalResponse::Ok(success) => {
             set_job_id_ia_url(pool, success.job_id.clone(), id).await?;
             let job_id = success.job_id.clone();
             let status_pool = pool.clone();
             tokio::spawn(async move {
-                let schedule_status_check_result = schedule_status_check(
-                    job_id,
-                    "https://web.archive.org/save/status",
-                    id,
-                    &status_pool,
-                )
-                .await;
+                let schedule_status_check_result =
+                    schedule_status_check(job_id, id, &status_pool).await;
                 if let Err(e) = schedule_status_check_result {
                     inc_archive_request_retry_count(&status_pool, id)
                         .await

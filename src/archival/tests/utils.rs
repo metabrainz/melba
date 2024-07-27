@@ -41,7 +41,7 @@ async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
     .await;
 
     if let Ok(res) = updated_res {
-        assert_eq!(res.status.unwrap(), true);
+        assert_eq!(res.status, 1);
         assert_eq!(res.job_id.unwrap(), "123abc");
     } else {
         panic!("Should return row")
@@ -52,7 +52,12 @@ async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
 #[tokio::test]
 async fn test_make_archival_network_request_success() -> Result<(), ArchivalError> {
     let testing_url = "www.example.com";
-    let mut server = mockito::Server::new_async().await;
+    let opts = mockito::ServerOpts {
+        host: "127.0.0.1",
+        port: 1234,
+        ..Default::default()
+    };
+    let mut server = mockito::Server::new_with_opts(opts);
     let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
@@ -69,11 +74,7 @@ async fn test_make_archival_network_request_success() -> Result<(), ArchivalErro
         .match_body(format!("url={}", testing_url).as_str())
         .with_body(r#"{"url": "www.example.com", "job_id": "12345" }"#)
         .create();
-    let response = make_archival_network_request(
-        "www.example.com",
-        format!("http://{}/save", server.host_with_port()).as_str(),
-    )
-    .await;
+    let response = make_archival_network_request("www.example.com").await;
     assert!(response.is_ok());
     mock.assert();
     assert_eq!(
@@ -89,7 +90,12 @@ async fn test_make_archival_network_request_success() -> Result<(), ArchivalErro
 #[tokio::test]
 async fn test_make_archival_network_request_failure() -> Result<(), ArchivalError> {
     let testing_url_invalid = "www.example.om";
-    let mut server = mockito::Server::new_async().await;
+    let opts = mockito::ServerOpts {
+        host: "127.0.0.1",
+        port: 1234,
+        ..Default::default()
+    };
+    let mut server = mockito::Server::new_with_opts(opts);
     let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
@@ -99,11 +105,7 @@ async fn test_make_archival_network_request_failure() -> Result<(), ArchivalErro
         .match_body(format!("url={}", testing_url_invalid).as_str())
         .with_body(r#"{"message":"www.example.om URL syntax is not valid.","status":"error","status_ext":"error:invalid-url-syntax"}"#)
         .create();
-    let response = make_archival_network_request(
-        "www.example.om",
-        format!("http://{}/save", server.host_with_port()).as_str(),
-    )
-    .await;
+    let response = make_archival_network_request("www.example.om").await;
     assert!(response.is_ok());
     mock.assert();
     assert_eq!(
@@ -120,7 +122,12 @@ async fn test_make_archival_network_request_failure() -> Result<(), ArchivalErro
 #[tokio::test]
 async fn test_make_archival_network_request_html_response() -> Result<(), ArchivalError> {
     let testing_url = "www.example.com";
-    let mut server = mockito::Server::new_async().await;
+    let opts = mockito::ServerOpts {
+        host: "127.0.0.1",
+        port: 1234,
+        ..Default::default()
+    };
+    let mut server = mockito::Server::new_with_opts(opts);
     let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
@@ -137,11 +144,7 @@ async fn test_make_archival_network_request_html_response() -> Result<(), Archiv
         .match_body(format!("url={}", testing_url).as_str())
         .with_body(r#"html response here"#)
         .create();
-    let response = make_archival_network_request(
-        "www.example.com",
-        format!("http://{}/save", server.host_with_port()).as_str(),
-    )
-    .await;
+    let response = make_archival_network_request("www.example.com").await;
     assert!(response.is_ok());
     mock.assert();
     assert_eq!(

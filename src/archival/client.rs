@@ -1,9 +1,8 @@
 use crate::configuration::Settings;
 use once_cell::sync::Lazy;
 use reqwest::{header, Client};
-use std::sync::Arc;
 
-pub static REQWEST_CLIENT: Lazy<Arc<Client>> = Lazy::new(|| {
+pub static REQWEST_CLIENT: Lazy<Client> = Lazy::new(|| {
     let settings = Settings::new().expect("Config needed");
     let mut headers = header::HeaderMap::new();
     headers.insert("Accept", "application/json".parse().unwrap());
@@ -21,10 +20,8 @@ pub static REQWEST_CLIENT: Lazy<Arc<Client>> = Lazy::new(|| {
         "application/x-www-form-urlencoded".parse().unwrap(),
     );
 
-    Arc::new(
-        Client::builder()
-            .default_headers(headers)
-            .build()
-            .expect("Failed to build HTTP client"),
-    )
+    Client::builder()
+        .default_headers(headers)
+        .build()
+        .expect("Failed to build HTTP client")
 });

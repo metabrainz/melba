@@ -6,7 +6,6 @@ use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sqlx::{Error, PgPool};
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::time;
 
@@ -80,7 +79,7 @@ pub async fn make_archival_network_request(
     url: &str,
     endpoint_url: &str,
 ) -> Result<ArchivalResponse, ArchivalError> {
-    let client = Arc::clone(&REQWEST_CLIENT);
+    let client = &REQWEST_CLIENT;
     let response = client
         .post(endpoint_url)
         .body(format!("url={}", url))
@@ -102,7 +101,7 @@ pub async fn make_archival_status_request(
     job_id: &str,
     endpoint_url: &str,
 ) -> Result<ArchivalStatusResponse, ArchivalError> {
-    let client = Arc::clone(&REQWEST_CLIENT);
+    let client = &REQWEST_CLIENT;
     let response = client
         .post(endpoint_url)
         .body(format!("job_id={}", job_id))

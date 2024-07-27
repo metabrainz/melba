@@ -1,4 +1,4 @@
-use crate::structs::internet_archive_urls::InternetArchiveUrls;
+use crate::structs::last_unprocessed_row::LastUnprocessedRow;
 use linkify::{LinkFinder, LinkKind};
 use mb_rs::schema::{EditData, EditNote};
 use serde_json::{json, Value};
@@ -159,80 +159,21 @@ pub async fn get_edit_type_if_editor_is_not_spammer(
 }
 
 ///This function fetches the latest row from internet_archive_urls_table
-pub async fn get_edit_data_and_note_start_id(pool: &PgPool) -> (i32, i32) {
-    let last_row = sqlx::query_as::<_, InternetArchiveUrls>(
+pub async fn get_edit_data_and_note_start_id(pool: &PgPool) -> Result<(i32, i32), Error> {
+    sqlx::query_as::<_, LastUnprocessedRow>(
         r#"
-        SELECT DISTINCT ON (from_table)
-        id, url, job_id, from_table, from_table_id, created_at, retry_count, is_saved
-        FROM external_url_archiver.internet_archive_urls
-        WHERE from_table IN ('edit_data', 'edit_note')
-        ORDER BY from_table, from_table_id DESC;
-        "#,
+            SELECT * FROM external_url_archiver.last_unprocessed_rows
+            WHERE table_name IN ('edit_data', 'edit_note');
+            "#,
     )
     .fetch_all(pool)
-    .await;
-    return match last_row {
-        Ok(res) => match res.len() {
-            1 => {
-                if res.first().unwrap().from_table == Some("edit_data".to_string()) {
-                    let edit_data_id = res.first().unwrap().from_table_id.unwrap();
-                    let edit_note_id = get_latest_edit_note_id(pool).await;
-                    (edit_data_id, edit_note_id)
-                } else {
-                    let edit_note_id = res.first().unwrap().from_table_id.unwrap();
-                    let edit_data_id = get_latest_edit_data_id(pool).await;
-                    (edit_data_id, edit_note_id)
-                }
-            }
-            2 => (res[0].from_table_id.unwrap(), res[1].from_table_id.unwrap()),
-            _ => initialise_empty_internet_archive_table(pool).await,
-        },
-        Err(e) => {
-            eprintln!(
-                "Error fetching edit data and edit note start id to start polling with. Error: {}",
-                e
-            );
-            initialise_empty_internet_archive_table(pool).await
-        }
-    };
-}
-
-//TODO: Make the following logic better!
-///This function should run when there is no internet_archive_urls table or the table is not populated
-pub async fn initialise_empty_internet_archive_table(pool: &PgPool) -> (i32, i32) {
-    let latest_edit_note = get_latest_edit_note_id(pool).await;
-    let latest_edit = get_latest_edit_data_id(pool).await;
-    println!("Latest edit: {}, note: {}", latest_edit, latest_edit_note);
-    // 0th-> Edit Data, 1st -> Edit Note
-    //TODO: Uncomment it later
-    // (latest_edit, latest_edit_note)
-    (111451813, 71025805)
-}
-
-pub async fn get_latest_edit_data_id(pool: &PgPool) -> i32 {
-    let select_latest_edit_data_row = "
-         SELECT DISTINCT ON (edit)
-         *
-         FROM edit_data
-         ORDER BY edit  DESC limit 1";
-
-    let latest_edit_data_row = sqlx::query_as::<_, EditData>(select_latest_edit_data_row)
-        .fetch_one(pool)
-        .await;
-    latest_edit_data_row.unwrap().edit
-}
-
-pub async fn get_latest_edit_note_id(pool: &PgPool) -> i32 {
-    let select_latest_edit_note_row = "
-         SELECT DISTINCT ON (id)
-         *
-         FROM edit_note
-         ORDER BY id  DESC LIMIT 1";
-
-    let latest_edit_note_row = sqlx::query_as::<_, EditNote>(select_latest_edit_note_row)
-        .fetch_one(pool)
-        .await;
-    latest_edit_note_row.unwrap().id
+    .await
+    .map(|edit_data_and_edit_column| {
+        (
+            edit_data_and_edit_column[0].id_column,
+            edit_data_and_edit_column[1].id_column,
+        )
+    })
 }
 
 /// This function takes input a URL string, and returns true if it should exclude the URL from saving
@@ -279,12 +220,32 @@ pub async fn save_url_to_internet_archive_urls(
         return Ok(());
     }
     let query = r#"
-                    INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
-                    VALUES ($1, $2, $3, 0, false)"#;
+                    INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
+                    VALUES ($1, $2, $3, 0)"#;
     sqlx::query(query)
         .bind(url)
         .bind(from_table)
         .bind(from_table_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Update the latest processed id in `last_processed_rows` table
+pub async fn update_last_unprocessed_rows(
+    from_table: &str,
+    table_id: i32,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    let query = r#"
+        UPDATE external_url_archiver.last_unprocessed_rows 
+        SET
+        id_column = $1
+        WHERE table_name = $2
+    "#;
+    sqlx::query(query)
+        .bind(table_id)
+        .bind(from_table)
         .execute(pool)
         .await?;
     Ok(())

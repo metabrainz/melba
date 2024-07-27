@@ -6,7 +6,8 @@ use crate::archival::utils::{
 use crate::archival::archival_response::ArchivalResponse;
 use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
-use crate::structs::internet_archive_urls::InternetArchiveUrls;
+use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
+use sentry::Level::Error;
 use sqlx::postgres::PgListener;
 use sqlx::PgPool;
 use std::time::Duration;
@@ -28,26 +29,36 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
     }
 }
 
-/// Handle what to do with the URL, based on the retry count, either we try to archive, save as failed, or increment the retry count
-pub async fn handle_payload(url: InternetArchiveUrls, pool: &PgPool) -> Result<(), ArchivalError> {
-    let id = url.id;
-    if url.retry_count >= Some(3) {
-        set_status(pool, id, "Failed".to_string()).await?;
-    } else if let Err(e) = archive(url, pool).await {
-        eprintln!("Archival Error: {}", e);
-        inc_archive_request_retry_count(pool, id).await?;
+/// Handle what to do with the URL when we listen it from postgres channel, based on the retry count, either we try to archive, save as failed, or increment the retry count
+pub async fn handle_payload(
+    url_row: InternetArchiveUrls,
+    pool: &PgPool,
+) -> Result<(), ArchivalError> {
+    if let Some(url) = url_row.url {
+        let id = url_row.id;
+        if url_row.retry_count >= Some(3) {
+            let status_message = url_row
+                .status_message
+                .unwrap_or("No status message present".to_string());
+            let status_ext = format!(
+                "FAILED Archival of URL {} , reason: {}",
+                url, status_message
+            );
+            set_status(pool, id, ArchivalStatus::Failed as i32).await?;
+            sentry::capture_message(status_ext.as_str(), Error);
+        } else {
+            let archival_result = archive(url, url_row.id, pool).await;
+            if let Err(e) = archival_result {
+                eprintln!("Archival Error : {}", e);
+                inc_archive_request_retry_count(pool, id).await?;
+            }
+        }
     }
     Ok(())
 }
 
 /// Send archival request, and schedule a status check request after `sleep_status_interval` seconds
-pub async fn archive(
-    internet_archive_urls_row: InternetArchiveUrls,
-    pool: &PgPool,
-) -> Result<(), ArchivalError> {
-    let url = internet_archive_urls_row.url.unwrap();
-    let id = internet_archive_urls_row.id;
-
+pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), ArchivalError> {
     match make_archival_network_request(url.as_str(), "https://web.archive.org/save").await? {
         // If the response contains job id, we check for status
         ArchivalResponse::Ok(success) => {
@@ -59,10 +70,13 @@ pub async fn archive(
                     job_id,
                     "https://web.archive.org/save/status",
                     id,
-                    status_pool,
+                    &status_pool,
                 )
                 .await;
                 if let Err(e) = schedule_status_check_result {
+                    inc_archive_request_retry_count(&status_pool, id)
+                        .await
+                        .unwrap();
                     sentry::capture_error(&e);
                 }
             });

@@ -4,7 +4,7 @@ use crate::archival::archival_response::{
 use crate::archival::client::REQWEST_CLIENT;
 use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
-use crate::structs::internet_archive_urls::InternetArchiveUrls;
+use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sqlx::{Error, PgPool};
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,22 +19,22 @@ pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
         r#"
              SELECT DISTINCT ON (id) *
              FROM external_url_archiver.internet_archive_urls
-             WHERE is_saved = false
+             WHERE status = 1
              ORDER BY id
              LIMIT 1
              "#,
     )
     .fetch_one(&pool)
     .await;
+    println!("What {:?}", last_row_result);
     last_row_result.map(|last_row| last_row.id).ok()
 }
 
-/// Updates a row in `internet_archive_urls` table with the `job_id` response received from `Wayback Machine API` request, and marks `is_saved` true.
+/// Updates a row in `internet_archive_urls` table with the `job_id` response received from `Wayback Machine API` request, and marks `status` processing.
 pub async fn set_job_id_ia_url(pool: &PgPool, job_id: String, id: i32) -> Result<(), Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET
-        is_saved = true,
         job_id = $1
         WHERE id = $2
      "#;
@@ -124,10 +124,19 @@ pub async fn schedule_status_check(
     job_id: String,
     endpoint_url: &str,
     id: i32,
-    pool: PgPool,
+    pool: &PgPool,
 ) -> Result<(), ArchivalError> {
+    println!("What");
     let settings = Settings::new().expect("Config settings are not configured properly");
-
+    println!("{}", job_id);
+    set_status_with_message(
+        pool,
+        id,
+        ArchivalStatus::Processing as i32,
+        "Processing".to_string(),
+    )
+    .await
+    .unwrap();
     for attempt in 1..=3 {
         time::sleep(Duration::from_secs(
             settings.listen_task.sleep_status_interval,
@@ -136,60 +145,94 @@ pub async fn schedule_status_check(
         match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
             ArchivalStatusResponse::Ok(status_response) => {
                 if status_response.status == "success" {
-                    set_status(&pool, id, status_response.status).await?;
+                    set_status_with_message(
+                        pool,
+                        id,
+                        ArchivalStatus::Success as i32,
+                        status_response.status,
+                    )
+                    .await?;
                     return Ok(());
-                } else if status_response.status == "pending" {
-                    println!(
-                        "Job {} is still pending. Time: {:?}",
-                        job_id,
-                        chrono::Utc::now()
-                    );
                 } else {
-                    println!(
-                        "Job {} returned status '{}', retry count : {}",
-                        job_id, status_response.status, attempt
-                    );
+                    if attempt == 3 {
+                        let status = status_response.status;
+                        eprintln!("Error making final status check request: {:?}", &status);
+                        inc_archive_request_retry_count(pool, id).await.unwrap();
+                        set_status_with_message(
+                            pool,
+                            id,
+                            ArchivalStatus::StatusError as i32,
+                            status,
+                        )
+                        .await?;
+                    }
+                    eprintln!("Could not archive: {} attempt", attempt)
                 }
             }
             ArchivalStatusResponse::Err(e) => {
-                eprintln!("Error making status check request: {:?}", e)
+                eprintln!("Error making status check request: {:?}", e);
+                if attempt == 3 {
+                    //Set status error
+                    inc_archive_request_retry_count(pool, id).await.unwrap();
+                    set_status_with_message(
+                        pool,
+                        id,
+                        ArchivalStatus::StatusError as i32,
+                        e.status_ext,
+                    )
+                    .await?;
+                    eprintln!(
+                        "Error making final status check request: {:?}",
+                        e.message.as_str()
+                    )
+                }
             }
             ArchivalStatusResponse::Html(message) => {
-                println!(
-                    "Internet Archive cannot archive currently, job {} cannot be checked for status. Response message: {}",
-                    job_id, message.html
-                );
-                sentry::capture_message(
-                    format!("Internet Archive is Not Working, {}", message.html).as_str(),
-                    sentry::Level::Warning,
-                );
+                eprintln!("Error making final status check request: {}", message.html);
+                if attempt == 3 {
+                    //Set status error
+                    inc_archive_request_retry_count(pool, id).await.unwrap();
+                    set_status_with_message(
+                        pool,
+                        id,
+                        ArchivalStatus::StatusError as i32,
+                        format!("Error: Could not save: {}", message.html),
+                    )
+                    .await?;
+                    sentry::capture_message(
+                        format!("Internet Archive is Not Working, {}", message.html).as_str(),
+                        sentry::Level::Warning,
+                    );
+                }
             }
-        }
-    }
-
-    // After 3 attempts, if still not success, update the status with the last response or Error
-    match make_archival_status_request(job_id.as_str(), endpoint_url).await? {
-        ArchivalStatusResponse::Ok(status_response) => {
-            set_status(&pool, id, status_response.status).await?;
-        }
-        ArchivalStatusResponse::Err(e) => {
-            set_status(&pool, id, format!("Error: Could not save: {:?}", e)).await?;
-            eprintln!("Error making final status check request: {:?}", e)
-        }
-        ArchivalStatusResponse::Html(message) => {
-            set_status(
-                &pool,
-                id,
-                format!("Error: Could not save: {}", message.html),
-            )
-            .await?;
-            eprintln!("Error making final status check request: {}", message.html)
         }
     }
     Ok(())
 }
 
-pub async fn set_status(pool: &PgPool, id: i32, status: String) -> Result<(), Error> {
+pub async fn set_status_with_message(
+    pool: &PgPool,
+    id: i32,
+    status: i32,
+    status_message: String,
+) -> Result<(), Error> {
+    let query = r#"
+        UPDATE external_url_archiver.internet_archive_urls
+        SET
+        status = $1,
+        status_message = $2
+        WHERE id = $3
+        "#;
+    sqlx::query(query)
+        .bind(status)
+        .bind(status_message)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn set_status(pool: &PgPool, id: i32, status: i32) -> Result<(), Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
         SET
@@ -202,6 +245,25 @@ pub async fn set_status(pool: &PgPool, id: i32, status: String) -> Result<(), Er
         .execute(pool)
         .await?;
     Ok(())
+}
+
+pub fn check_if_permanent_error(status_ext: &str) -> bool {
+    let permanent_errors = vec![
+        "error:bad-request",
+        "error:blocked-url",
+        "error:blocked",
+        "error:blocked-client-ip",
+        "error:filesize-limit",
+        "error:http-version-not-supported",
+        "error:invalid-url-syntax",
+        "error:invalid-host-resolution",
+        "error:method-not-allowed",
+        "error:not-implemented",
+        "error:not-found",
+        "error:no-access",
+        "error:unauthorized",
+    ];
+    permanent_errors.iter().any(|&error| error == status_ext)
 }
 
 #[cfg(test)]

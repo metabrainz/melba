@@ -11,15 +11,14 @@ RETURNS TRIGGER AS $$
 
         IF url_value IS NOT NULL THEN
                 INSERT INTO external_url_archiver.internet_archive_urls (
-                    url, job_id, from_table, from_table_id, created_at, retry_count, is_saved
+                    url, job_id, from_table, from_table_id, created_at, retry_count
                 ) VALUES (
                     url_value,  -- url
                     NULL,       -- job_id
                     'edit_data', -- from_table
                     NEW.edit,   -- from_table_id
                     NOW(),      -- created_at
-                    0,          -- retry_count
-                    FALSE       -- is_saved
+                    0          -- retry_count
                 );
         END IF;
         RETURN NEW;

@@ -40,6 +40,7 @@ pub struct ArchivalStatusSuccessResponse {
 pub struct ArchivalStatusErrorResponse {
     pub job_id: String,
     pub message: String,
+    pub status_ext: String,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

@@ -15,7 +15,7 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     let listener_pool = pool.clone();
     let retry_task_pool = pool.clone();
 
-    let mut poller = Poller::new(settings.poller_task.poll_interval, pool.clone()).await;
+    let mut poller = Poller::new(settings.poller_task.poll_interval, pool.clone()).await?;
     let notifier = Arc::new(Mutex::new(Notifier::new(pool.clone()).await));
 
     let poll_task_handler = tokio::spawn(async move {

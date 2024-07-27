@@ -41,7 +41,7 @@ async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
     .await;
 
     if let Ok(res) = updated_res {
-        assert_eq!(res.is_saved.unwrap(), true);
+        assert_eq!(res.status.unwrap(), true);
         assert_eq!(res.job_id.unwrap(), "123abc");
     } else {
         panic!("Should return row")

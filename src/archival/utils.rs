@@ -1,8 +1,10 @@
+use crate::archival::archival_response;
 use crate::archival::archival_response::{
-    ArchivalHtmlResponse, ArchivalResponse, ArchivalStatusResponse,
+    ArchivalResponse, ArchivalStatusErrorResponse, ArchivalStatusResponse,
 };
 use crate::archival::client::REQWEST_CLIENT;
 use crate::archival::error::ArchivalError;
+use crate::archival::error::ArchivalError::SaveRequestError;
 use crate::configuration::Settings;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sqlx::{Error, PgPool};
@@ -97,10 +99,12 @@ pub async fn make_archival_network_request(url: &str) -> Result<ArchivalResponse
     if let Ok(res) = serde_json::from_str::<ArchivalResponse>(&response_text) {
         return Ok(res);
     }
+    if let Ok(e) = serde_json::from_str::<archival_response::ArchivalErrorResponse>(&response_text)
+    {
+        return Err(SaveRequestError(e));
+    }
     // HTML response, case when IA can not archive URL, and is under maintenance
-    Ok(ArchivalResponse::Html(ArchivalHtmlResponse {
-        html: response_text,
-    }))
+    Err(ArchivalError::HtmlResponse(response_text))
 }
 
 ///Checks the status of `job_id` of a URL
@@ -119,9 +123,10 @@ pub async fn make_archival_status_request(
     if let Ok(res) = serde_json::from_str::<ArchivalStatusResponse>(&response_text) {
         return Ok(res);
     }
-    Ok(ArchivalStatusResponse::Html(ArchivalHtmlResponse {
-        html: response_text,
-    }))
+    if let Ok(e) = serde_json::from_str::<ArchivalStatusErrorResponse>(&response_text) {
+        return Err(ArchivalError::StatusRequestErrorResponse(e));
+    }
+    Err(ArchivalError::HtmlResponse(response_text))
 }
 
 ///Schedules the status check of a URL's `job_id`, and
@@ -130,85 +135,38 @@ pub async fn schedule_status_check(
     id: i32,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
-    println!("What");
     let settings = Settings::new().expect("Config settings are not configured properly");
     println!("{}", job_id);
-    set_status_with_message(
-        pool,
-        id,
-        ArchivalStatus::Processing as i32,
-        "Processing".to_string(),
-    )
-    .await
-    .unwrap();
+    set_status_with_message(pool, id, ArchivalStatus::Processing as i32, "Processing").await?;
     for attempt in 1..=3 {
         time::sleep(Duration::from_secs(
             settings.listen_task.sleep_status_interval,
         ))
         .await;
-        match make_archival_status_request(job_id.as_str()).await? {
-            ArchivalStatusResponse::Ok(status_response) => {
-                if status_response.status == "success" {
-                    set_status_with_message(
-                        pool,
-                        id,
-                        ArchivalStatus::Success as i32,
-                        status_response.status,
-                    )
-                    .await?;
-                    return Ok(());
-                } else {
-                    if attempt == 3 {
-                        let status = status_response.status;
-                        eprintln!("Error making final status check request: {:?}", &status);
-                        inc_archive_request_retry_count(pool, id).await.unwrap();
-                        set_status_with_message(
-                            pool,
-                            id,
-                            ArchivalStatus::StatusError as i32,
-                            status,
-                        )
-                        .await?;
-                    }
-                    eprintln!("Could not archive: {} attempt", attempt)
-                }
+        let archival_status_response = make_archival_status_request(job_id.as_str()).await?;
+        if archival_status_response.status == "success" {
+            set_status_with_message(
+                pool,
+                id,
+                ArchivalStatus::Success as i32,
+                archival_status_response.status.as_str(),
+            )
+            .await?;
+            return Ok(());
+        } else {
+            if attempt == 3 {
+                let status = archival_status_response.status;
+                eprintln!("Error making final status check request: {:?}", &status);
+                inc_archive_request_retry_count(pool, id).await?;
+                set_status_with_message(
+                    pool,
+                    id,
+                    ArchivalStatus::StatusError as i32,
+                    status.as_str(),
+                )
+                .await?;
             }
-            ArchivalStatusResponse::Err(e) => {
-                eprintln!("Error making status check request: {:?}", e);
-                if attempt == 3 {
-                    //Set status error
-                    inc_archive_request_retry_count(pool, id).await.unwrap();
-                    set_status_with_message(
-                        pool,
-                        id,
-                        ArchivalStatus::StatusError as i32,
-                        e.status_ext,
-                    )
-                    .await?;
-                    eprintln!(
-                        "Error making final status check request: {:?}",
-                        e.message.as_str()
-                    )
-                }
-            }
-            ArchivalStatusResponse::Html(message) => {
-                eprintln!("Error making final status check request: {}", message.html);
-                if attempt == 3 {
-                    //Set status error
-                    inc_archive_request_retry_count(pool, id).await.unwrap();
-                    set_status_with_message(
-                        pool,
-                        id,
-                        ArchivalStatus::StatusError as i32,
-                        format!("Error: Could not save: {}", message.html),
-                    )
-                    .await?;
-                    sentry::capture_message(
-                        format!("Internet Archive is Not Working, {}", message.html).as_str(),
-                        sentry::Level::Warning,
-                    );
-                }
-            }
+            eprintln!("Could not archive: {} attempt", attempt)
         }
     }
     Ok(())
@@ -218,7 +176,7 @@ pub async fn set_status_with_message(
     pool: &PgPool,
     id: i32,
     status: i32,
-    status_message: String,
+    status_message: &str,
 ) -> Result<(), Error> {
     let query = r#"
         UPDATE external_url_archiver.internet_archive_urls
@@ -230,21 +188,6 @@ pub async fn set_status_with_message(
     sqlx::query(query)
         .bind(status)
         .bind(status_message)
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
-pub async fn set_status(pool: &PgPool, id: i32, status: i32) -> Result<(), Error> {
-    let query = r#"
-        UPDATE external_url_archiver.internet_archive_urls
-        SET
-        status = $1
-        WHERE id = $2
-        "#;
-    sqlx::query(query)
-        .bind(status)
         .bind(id)
         .execute(pool)
         .await?;
@@ -267,7 +210,9 @@ pub fn check_if_permanent_error(status_ext: &str) -> bool {
         "error:no-access",
         "error:unauthorized",
     ];
-    permanent_errors.iter().any(|&error| error == status_ext)
+    permanent_errors
+        .iter()
+        .any(|&error| status_ext.contains(error))
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq)]
-pub struct ArchivalSuccessResponse {
+pub struct ArchivalResponse {
     pub url: String,
     pub job_id: String,
 }
@@ -13,21 +13,8 @@ pub struct ArchivalErrorResponse {
     pub status_ext: String,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
-pub struct ArchivalHtmlResponse {
-    pub html: String,
-}
-
-#[derive(Deserialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum ArchivalResponse {
-    Ok(ArchivalSuccessResponse),
-    Err(ArchivalErrorResponse),
-    Html(ArchivalHtmlResponse),
-}
-
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
-pub struct ArchivalStatusSuccessResponse {
+pub struct ArchivalStatusResponse {
     pub duration_sec: Option<f64>,
     pub http_status: Option<i64>,
     pub job_id: String,
@@ -41,12 +28,4 @@ pub struct ArchivalStatusErrorResponse {
     pub job_id: String,
     pub message: String,
     pub status_ext: String,
-}
-
-#[derive(Deserialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum ArchivalStatusResponse {
-    Ok(ArchivalStatusSuccessResponse),
-    Err(ArchivalStatusErrorResponse),
-    Html(ArchivalHtmlResponse),
 }

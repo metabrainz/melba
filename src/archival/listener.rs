@@ -1,9 +1,8 @@
 use crate::archival::utils::{
     inc_archive_request_retry_count, make_archival_network_request, schedule_status_check,
-    set_job_id_ia_url, set_status,
+    set_job_id_ia_url, set_status_with_message,
 };
 
-use crate::archival::archival_response::ArchivalResponse;
 use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
@@ -44,12 +43,20 @@ pub async fn handle_payload(
                 "FAILED Archival of URL {} , reason: {}",
                 url, status_message
             );
-            set_status(pool, id, ArchivalStatus::Failed as i32).await?;
+            set_status_with_message(pool, id, ArchivalStatus::Failed as i32, status_ext.as_str())
+                .await?;
             sentry::capture_message(status_ext.as_str(), Error);
         } else {
             let archival_result = archive(url, url_row.id, pool).await;
             if let Err(e) = archival_result {
                 eprintln!("Archival Error : {}", e);
+                set_status_with_message(
+                    pool,
+                    id,
+                    ArchivalStatus::StatusError as i32,
+                    e.to_string().as_str(),
+                )
+                .await?;
                 inc_archive_request_retry_count(pool, id).await?;
             }
         }
@@ -59,38 +66,32 @@ pub async fn handle_payload(
 
 /// Send archival request, and schedule a status check request after `sleep_status_interval` seconds
 pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), ArchivalError> {
-    match make_archival_network_request(url.as_str()).await? {
-        // If the response contains job id, we check for status
-        ArchivalResponse::Ok(success) => {
-            set_job_id_ia_url(pool, success.job_id.clone(), id).await?;
-            let job_id = success.job_id.clone();
-            let status_pool = pool.clone();
-            tokio::spawn(async move {
-                let schedule_status_check_result =
-                    schedule_status_check(job_id, id, &status_pool).await;
-                if let Err(e) = schedule_status_check_result {
-                    inc_archive_request_retry_count(&status_pool, id)
-                        .await
-                        .unwrap();
+    let success = make_archival_network_request(url.as_str()).await?;
+    set_job_id_ia_url(pool, success.job_id.clone(), id).await?;
+    let job_id = success.job_id.clone();
+    let status_pool = pool.clone();
+    tokio::spawn(async move {
+        let schedule_status_check_result = schedule_status_check(job_id, id, &status_pool).await;
+        if let Err(e) = schedule_status_check_result {
+            inc_archive_request_retry_count(&status_pool, id)
+                .await
+                .unwrap_or_else(|e| {
+                    eprintln!("Could not increment archive request retry count");
                     sentry::capture_error(&e);
-                }
+                });
+            set_status_with_message(
+                &status_pool,
+                id,
+                ArchivalStatus::StatusError as i32,
+                e.to_string().as_str(),
+            )
+            .await
+            .unwrap_or_else(|e| {
+                eprintln!("Could not increment archive request retry count");
+                sentry::capture_error(&e);
             });
+            sentry::capture_error(&e);
         }
-        ArchivalResponse::Err(e) => {
-            inc_archive_request_retry_count(pool, id).await?;
-            println!("Error archiving url {} ,ERROR:  {}", url, e.message)
-        }
-        ArchivalResponse::Html(response) => {
-            inc_archive_request_retry_count(pool, id).await?;
-            println!(
-                "Internet Archive cannot archive currently {}, due to: {}",
-                url, response.html
-            );
-            sentry::capture_message(
-                format!("Internet Archive is Not Working, {}", response.html).as_str(),
-                sentry::Level::Warning,
-            );
-        }
-    }
+    });
     Ok(())
 }

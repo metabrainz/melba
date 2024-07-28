@@ -1,6 +1,6 @@
 use super::*;
 use crate::archival::archival_response::ArchivalErrorResponse;
-use crate::archival::archival_response::ArchivalSuccessResponse;
+use crate::archival::archival_response::ArchivalResponse;
 use crate::configuration::Settings;
 use sqlx::Error;
 
@@ -79,7 +79,7 @@ async fn test_make_archival_network_request_success() -> Result<(), ArchivalErro
     mock.assert();
     assert_eq!(
         response.unwrap(),
-        ArchivalResponse::Ok(ArchivalSuccessResponse {
+        ArchivalResponse::Ok(ArchivalResponse {
             url: "www.example.com".to_string(),
             job_id: "12345".to_string(),
         })
@@ -148,10 +148,8 @@ async fn test_make_archival_network_request_html_response() -> Result<(), Archiv
     assert!(response.is_ok());
     mock.assert();
     assert_eq!(
-        response.unwrap(),
-        ArchivalResponse::Html(ArchivalHtmlResponse {
-            html: "html response here".to_string()
-        })
+        response.unwrap_err(),
+        ArchivalError::HtmlResponse("html response here".to_string())
     );
     Ok(())
 }

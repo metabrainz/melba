@@ -1,3 +1,4 @@
+use crate::archival::archival_response::{ArchivalErrorResponse, ArchivalStatusErrorResponse};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -10,4 +11,13 @@ pub enum ArchivalError {
 
     #[error("sqlx error: {0}")]
     SqlxError(#[from] sqlx::Error),
+
+    #[error("archival error: {0:?}")]
+    SaveRequestError(ArchivalErrorResponse),
+
+    #[error("archival status error {0:?}")]
+    StatusRequestErrorResponse(ArchivalStatusErrorResponse),
+
+    #[error("HTML Response: {0}")]
+    HtmlResponse(String),
 }

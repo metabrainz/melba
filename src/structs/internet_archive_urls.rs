@@ -12,8 +12,8 @@ pub enum ArchivalStatus {
     NotStarted = 1,
     Processing = 2,
     Success = 3,
-    Failed = 4,
-    StatusError = 5,
+    StatusError = 4,
+    Failed = 5,
 }
 
 impl TryFrom<i32> for ArchivalStatus {
@@ -23,8 +23,8 @@ impl TryFrom<i32> for ArchivalStatus {
             1 if 1 == NotStarted as i32 => Ok(NotStarted),
             2 if 2 == Processing as i32 => Ok(Processing),
             3 if 3 == Success as i32 => Ok(Success),
-            4 if 4 == Failed as i32 => Ok(Failed),
-            5 if 5 == StatusError as i32 => Ok(StatusError),
+            4 if 4 == StatusError as i32 => Ok(StatusError),
+            5 if 5 == Failed as i32 => Ok(Failed),
             _ => Err(()),
         }
     }

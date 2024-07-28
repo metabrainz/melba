@@ -37,7 +37,6 @@ pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
     )
     .fetch_one(&pool)
     .await;
-    println!("What {:?}", last_row_result);
     last_row_result.map(|last_row| last_row.id).ok()
 }
 

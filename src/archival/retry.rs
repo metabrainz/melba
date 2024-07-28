@@ -30,7 +30,6 @@ pub async fn start(pool: PgPool) -> Result<(), Error> {
             retry_and_cleanup_ia_row(row, &pool).await?;
         }
         last_id += select_limit;
-        println!("Retry task: {}, {}", last_id, select_limit)
     }
     println!("Retry/Cleanup Task Complete");
     Ok(())

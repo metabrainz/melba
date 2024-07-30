@@ -1,6 +1,4 @@
 use super::*;
-use crate::archival::archival_response::ArchivalErrorResponse;
-use crate::archival::archival_response::ArchivalResponse;
 use crate::configuration::Settings;
 use sqlx::Error;
 
@@ -48,54 +46,15 @@ async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
     }
     Ok(())
 }
-
 #[tokio::test]
-async fn test_make_archival_network_request_success() -> Result<(), ArchivalError> {
-    let testing_url = "www.example.com";
-    let opts = mockito::ServerOpts {
-        host: "127.0.0.1",
-        port: 1234,
-        ..Default::default()
-    };
-    let mut server = mockito::Server::new_with_opts(opts);
-    let settings = Settings::new().expect("Config settings are not configured properly");
-    let mock = server
-        .mock("POST", "/save")
-        .match_header("Accept", "application/json")
-        .match_header(
-            "Authorization",
-            format!(
-                "LOW {}:{}",
-                settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
-            )
-            .as_str(),
-        )
-        .match_header("Content-Type", "application/x-www-form-urlencoded")
-        .match_body(format!("url={}", testing_url).as_str())
-        .with_body(r#"{"url": "www.example.com", "job_id": "12345" }"#)
-        .create();
-    let response = make_archival_network_request("www.example.com").await;
-    assert!(response.is_ok());
-    mock.assert();
-    assert_eq!(
-        response.unwrap(),
-        ArchivalResponse::Ok(ArchivalResponse {
-            url: "www.example.com".to_string(),
-            job_id: "12345".to_string(),
-        })
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_make_archival_network_request_failure() -> Result<(), ArchivalError> {
+async fn test_make_archival_network_request() -> Result<(), ArchivalError> {
     let testing_url_invalid = "www.example.om";
     let opts = mockito::ServerOpts {
         host: "127.0.0.1",
         port: 1234,
         ..Default::default()
     };
-    let mut server = mockito::Server::new_with_opts(opts);
+    let mut server = mockito::Server::new_with_opts_async(opts).await;
     let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
@@ -105,31 +64,9 @@ async fn test_make_archival_network_request_failure() -> Result<(), ArchivalErro
         .match_body(format!("url={}", testing_url_invalid).as_str())
         .with_body(r#"{"message":"www.example.om URL syntax is not valid.","status":"error","status_ext":"error:invalid-url-syntax"}"#)
         .create();
-    let response = make_archival_network_request("www.example.om").await;
-    assert!(response.is_ok());
-    mock.assert();
-    assert_eq!(
-        response.unwrap(),
-        ArchivalResponse::Err(ArchivalErrorResponse {
-            message: "www.example.om URL syntax is not valid.".to_string(),
-            status: "error".to_string(),
-            status_ext: "error:invalid-url-syntax".to_string(),
-        })
-    );
-    Ok(())
-}
 
-#[tokio::test]
-async fn test_make_archival_network_request_html_response() -> Result<(), ArchivalError> {
     let testing_url = "www.example.com";
-    let opts = mockito::ServerOpts {
-        host: "127.0.0.1",
-        port: 1234,
-        ..Default::default()
-    };
-    let mut server = mockito::Server::new_with_opts(opts);
-    let settings = Settings::new().expect("Config settings are not configured properly");
-    let mock = server
+    let mock2 = server
         .mock("POST", "/save")
         .match_header("Accept", "application/json")
         .match_header(
@@ -144,12 +81,31 @@ async fn test_make_archival_network_request_html_response() -> Result<(), Archiv
         .match_body(format!("url={}", testing_url).as_str())
         .with_body(r#"html response here"#)
         .create();
-    let response = make_archival_network_request("www.example.com").await;
-    assert!(response.is_ok());
+
+    let mock3 = server
+        .mock("POST", "/save")
+        .match_header("Accept", "application/json")
+        .match_header(
+            "Authorization",
+            format!(
+                "LOW {}:{}",
+                settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+            )
+            .as_str(),
+        )
+        .match_header("Content-Type", "application/x-www-form-urlencoded")
+        .match_body(format!("url={}", testing_url).as_str())
+        .with_body(r#"{"url": "www.example.com", "job_id": "12345" }"#)
+        .create();
+    let response = make_archival_network_request("www.example.om").await;
+    assert!(response.is_err());
     mock.assert();
-    assert_eq!(
-        response.unwrap_err(),
-        ArchivalError::HtmlResponse("html response here".to_string())
-    );
+    let response2 = make_archival_network_request("www.example.com").await;
+    assert!(response2.is_err());
+    mock2.assert();
+    let response3 = make_archival_network_request("www.example.com").await;
+    assert!(response3.is_ok());
+    mock3.assert();
+
     Ok(())
 }

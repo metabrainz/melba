@@ -14,8 +14,8 @@ Following are the long-running tasks:
 
 1. `poller task`
    - Create a `Poller` implementation which:
-     - Gets the last `edit_note` id from `internet_archive_urls` table. We start polling the `edit_note` table from this id.
-   - Poll `edit_note` table for URLs
+     - Gets the latest `edit_note` id `edit_data` edit from `internet_archive_urls` table. We start polling the `edit_note` and `edit_data` from these ids.
+   - Poll `edit_note` and `edit_data` table for URLs
    - Transformations to required format
    - Save output to `internet_archive_urls` table
 2. `archival task`
@@ -23,10 +23,15 @@ Following are the long-running tasks:
      1. `notifer`
          - Creates a `Notifier` implementation which:
            - Fetches the last unarchived URL row from `internet_archive_urls` table, and start notifying from this row id.
-           - Initialises a postgres function `notify_archive_urls`, which takes the `start_id` integer value, from where we start notifying the channel in one go.
-         - Reads `internet_archive_urls` table periodically, and notifies the task which will save the URLS, through a channel called `archive_urls`.
+           - Initialises a postgres function `notify_archive_urls`, which takes the `url_id` integer value, and sends the corresponding `internet_archive_urls` row through the channel called `archive_urls`.
+         - This periodically run in order to archive URLs from `internet_archive_urls`.
      2. `listener`
          - Listens to the `archive_urls` channel, and makes the necessary Wayback Machine API request (The API calls are still to be made).
+         - The listener task is delayed for currently 5 seconds, so that no matter how many URLs are passed to the channel, it only receives 1 URL per 5 seconds, in order to work under IA rate limits.
+3. `retry/cleanup task`
+   - Runs every 24 hours, and does the following:
+     1. If the `status` of the URL archival is `success`, and the URL is present in the table for more than 24 hours, cleans it.
+     2. In case the URL's status is still null which means pending, it resends the URL to `archive_urls` channel from `notify_archive_urls` function, so that it can be re-archived.
 
 ### See the app architecture [here](./docs/architecture.md)
 

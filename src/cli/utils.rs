@@ -7,8 +7,8 @@ use sqlx::{Error, PgPool};
 pub async fn insert_url_to_internet_archive_urls(url: &str, pool: &PgPool) -> Result<i32, Error> {
     sqlx::query!(
         r#"
-        INSERT INTO external_url_archiver.internet_archive_urls (url, retry_count, is_saved)
-        VALUES ($1, 0, false)
+        INSERT INTO external_url_archiver.internet_archive_urls (url, retry_count)
+        VALUES ($1, 0)
         RETURNING id
     "#,
         url
@@ -37,8 +37,8 @@ pub async fn insert_edit_data_row_to_internet_archive_urls(
     for url in &urls {
         let id = sqlx::query!(
         r#"
-            INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
-            VALUES ($1, 'edit_data', $2, 0, false)
+            INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
+            VALUES ($1, 'edit_data', $2, 0)
             RETURNING id
         "#,
             url,
@@ -70,8 +70,8 @@ pub async fn insert_edit_note_row_to_internet_archive_urls(
     for url in &urls {
         let id = sqlx::query!(
         r#"
-            INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count, is_saved)
-            VALUES ($1, 'edit_note', $2, 0, false)
+            INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
+            VALUES ($1, 'edit_note', $2, 0)
             RETURNING id
         "#,
             url,

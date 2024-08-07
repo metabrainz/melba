@@ -6,15 +6,16 @@ use crate::archival::client::REQWEST_CLIENT;
 use crate::archival::error::ArchivalError;
 use crate::archival::error::ArchivalError::SaveRequestError;
 use crate::configuration::Settings;
+use crate::metrics::Metrics;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sqlx::{Error, PgPool};
 use std::time::Duration;
 use tokio::time;
 
 #[cfg(not(test))]
-const SAVE_ENDPOINT_URL: &str = "https://web.archive.org/save";
+const SAVE_ENDPOINT_URL: &str = "http://web.archive.org/save";
 #[cfg(not(test))]
-const STATUS_ENDPOINT_URL: &str = "https://web.archive.org/save/status";
+const STATUS_ENDPOINT_URL: &str = "http://web.archive.org/save/status";
 
 #[cfg(test)]
 const SAVE_ENDPOINT_URL: &str = "http://127.0.0.1:1234/save";
@@ -134,6 +135,9 @@ pub async fn schedule_status_check(
     id: i32,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
+    let metrics = Metrics::new().await;
+    metrics.network_request_counter.inc();
+    metrics.push_metrics().await;
     let settings = Settings::new().expect("Config settings are not configured properly");
     println!("{}", job_id);
     set_status_with_message(pool, id, ArchivalStatus::Processing as i32, "Processing").await?;

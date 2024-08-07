@@ -22,6 +22,7 @@ thiserror = "1.0.61"
 config = "0.14.0"
 once_cell = "1.19.0"
 sentry = "0.34.0"
+prometheus = {version = "0.13.4", features = ["push"]}
 
 [lib]
 path = "src/lib.rs"

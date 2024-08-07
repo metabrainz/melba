@@ -1,3 +1,4 @@
+use crate::metrics::Metrics;
 use crate::poller::utils::{
     extract_url_from_edit_data, extract_url_from_edit_note, save_url_to_internet_archive_urls,
 };
@@ -19,7 +20,7 @@ pub async fn poll_db(
         "EditNote: {}, EditData: {}",
         edit_note_start_idx, edit_data_start_idx
     );
-
+    let metrics = Metrics::new().await;
     let edits = sqlx::query_as::<_, EditData>(
         r#"
             SELECT DISTINCT ON (edit)
@@ -70,6 +71,8 @@ pub async fn poll_db(
             println!("{}", url);
         }
     }
+    metrics.db_poll_counter.inc();
+    metrics.push_metrics().await;
 
     // Return the next ids of the last edit and notes for the next poll
     Ok((

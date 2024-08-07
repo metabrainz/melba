@@ -10,6 +10,7 @@ mod poller;
 mod structs;
 
 mod configuration;
+mod metrics;
 
 fn main() {
     let settings = Settings::new().expect("Sentry Config not set");

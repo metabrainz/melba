@@ -13,13 +13,12 @@ ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
     cargo build --release --target x86_64-unknown-linux-gnu && \
-    cp ./target/x86_64-unknown-linux-gnu/release/mb-exurl-ia-service /mb-exurl-ia-service
-
+    cp ./target/x86_64-unknown-linux-gnu/release/mb-ia /mb-ia
 FROM scratch
 
 WORKDIR /app
+COPY --from=builder /mb-ia ./app
 
-COPY --from=builder /mb-exurl-ia-service ./app
-
+COPY --from=builder /app/config /app/config
 CMD ["/app/app"]
 

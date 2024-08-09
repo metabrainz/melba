@@ -8,6 +8,13 @@ sql_dir="sql"
 # Array of SQL files
 sql_files=("001_CreateSchema.sql" "002_CreateTable.sql" "003_CreateFunction.sql" "004_CreateTrigger.sql" "005_CreateIndex.sql")
 
+# Add the appropriate populate SQL file based on RUN_MODE
+if [ "$RUN_MODE" = "development" ]; then
+    sql_files+=("006_PopulateTableDEV.sql")
+else
+    sql_files+=("006_PopulateTable.sql")
+fi
+
 # Function to run a single SQL file
 run_sql_file() {
     local file=$1

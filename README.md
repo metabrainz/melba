@@ -40,13 +40,16 @@ Following are the long-running tasks:
 > - Follow https://github.com/metabrainz/musicbrainz-docker to install the required containers and db dumps.
 > - Rename the `.env.example` to `.env`.
 > - After ensuring musicbrainz_db is running on port 5432, Run the script `init_db.sh` in scripts dir.
+> - In `config/development.toml` file, make sure to create a sentry rust project, enter your sentry project [DSN](https://docs.sentry.io/platforms/rust/#configure) (Data Source Name) in the `url` key's value. 
+> - Get the Internet Archive API accesskey and secret from [here](https://archive.org/account/s3.php) (requires sign in). Paste them in `config/development.toml` file `[wayback_machine_api]`'s variables `myaccesskey` and `mysecret`.
+
 
 There are 2 methods to run the program:
 1. Build the project and run.
     - Make sure rust is installed.
    - ```shell
         cargo build &&
-        ./target/debug/mb-exurl-ia-service
+        ./target/debug/mb-ia
         ```
 2. Use the Dockerfile
    - Note that the container has to run in the same network as musicbrainz db network bridge.
@@ -55,9 +58,22 @@ There are 2 methods to run the program:
        ```
 
    2. ```shell
-      docker buildx build --build-arg PGHOST=musicbrainz-docker-db-1 -t mb-exurl-ia-service:latest .
+      docker compose up --build
       ```
-   
-   3. ```shell
-      docker run -e PGHOST=musicbrainz-docker-db-1 --network musicbrainz-docker_default --init mb-exurl-ia-service:latest
-      ```
+
+#### Setting up Prometheus, Grafana
+1. On your browser, go to `localhost:3000`, to access grafana. Login using admin as username and password.
+   ![img.png](assets/grafana_login_page.png)
+2. Add Prometheus as Data Source.
+![img_1.png](assets/add_data_source_screen.png)
+3. Enter `http://prometheus:9090` in prometheus server URL, and press `Save and Test`.
+![img_2.png](assets/prometheus_server_url.png)
+4. Go to Dashboards, and press `Create Dashboards` -> `Add Visualization` -> Choose `prometheus`.
+![img_3.png](assets/dashboard_with_prometheus.png)
+5. Now choose metrics:
+    > - Currently, there are 2 example metrics which collect db polls and network requests.
+   - `db_polls_total`
+   - `network_requests_total`
+      ![img_4.png](assets/dashboard_metric_explorer.png)
+6. Run the queries
+![img_5.png](assets/working_grafana_dashboard.png)

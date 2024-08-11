@@ -1,4 +1,4 @@
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, File};
 use dotenv::dotenv;
 use serde::Deserialize;
 use std::env;
@@ -54,7 +54,6 @@ impl Settings {
         let config = Config::builder()
             .add_source(File::with_name("config/default"))
             .add_source(File::with_name(&format!("config/{}", run_mode)).required(false))
-            .add_source(Environment::default().separator("_"))
             .build()?;
         config.try_deserialize()
     }

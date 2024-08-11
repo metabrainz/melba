@@ -49,7 +49,7 @@ impl Metrics {
                 registry.blocking_lock().gather(),
                 None,
             )
-            .unwrap();
+            .unwrap_or_default();
         })
         .await
         .unwrap();

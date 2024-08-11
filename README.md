@@ -58,7 +58,7 @@ There are 2 methods to run the program:
        ```
 
    2. ```shell
-      docker compose up --build
+      docker-compose -f docker/docker-compose.dev.yml up --build
       ```
 
 #### Setting up Prometheus, Grafana

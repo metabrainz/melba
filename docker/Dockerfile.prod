@@ -1,4 +1,4 @@
-FROM rust:latest as builder
+FROM rust:latest AS builder
 
 WORKDIR /app
 
@@ -10,9 +10,7 @@ ENV PGHOST=${PGHOST}
 ENV RUSTFLAGS='-C target-feature=+crt-static'
 ENV SQLX_OFFLINE=true
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    cargo build --release --target x86_64-unknown-linux-gnu && \
+RUN cargo build --release --target x86_64-unknown-linux-gnu && \
     cp ./target/x86_64-unknown-linux-gnu/release/mb-ia /mb-ia
 FROM scratch
 

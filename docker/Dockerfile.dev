@@ -1,0 +1,32 @@
+FROM ubuntu:latest
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y curl build-essential libssl-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH=/root/.cargo/bin:$PATH
+
+WORKDIR /app
+
+COPY . .
+
+ARG PGHOST
+ENV PGHOST=${PGHOST}
+
+ENV RUSTFLAGS='-C target-feature=+crt-static'
+ENV SQLX_OFFLINE=true
+
+# Build the project in debug mode and place the binary in /app
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/app/target \
+    cargo build --target x86_64-unknown-linux-gnu && \
+    cp ./target/x86_64-unknown-linux-gnu/debug/mb-ia /app/mb-ia
+
+# List files in the current directory for debugging
+RUN ls -l /app
+
+# Set the working directory to /app and run the binary
+CMD ["/app/mb-ia"]

@@ -1,11 +1,11 @@
-version: '3.8'
 services:
   mb-ia-url-archiver:
     container_name: mb-ia-url-archiver
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile.prod
     environment:
-      - RUN_MODE=development
+      - RUN_MODE=production
       - PGHOST=musicbrainz-docker-db-1
       - APP_PUSH_GATEWAY=pushgateway:9091
     networks:
@@ -21,9 +21,10 @@ services:
       - default
     command: --config.file=/etc/prometheus/prometheus.yaml
     volumes:
-      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ../prometheus.yaml:/etc/prometheus/prometheus.yaml
     depends_on:
       - pushgateway
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -37,6 +38,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     depends_on:
       - prometheus
+
   pushgateway:
     container_name: pushgateway
     image: prom/pushgateway
@@ -44,6 +46,7 @@ services:
       - "9091:9091"
     networks:
       - default
+
 networks:
   default:
   musicbrainz-docker_default:

@@ -1,6 +1,7 @@
 use prometheus::{labels, push_metrics, Counter, Opts, Registry};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::task::spawn_blocking;
 
 pub struct Metrics {
     pub db_poll_counter: Counter,
@@ -39,13 +40,18 @@ impl Metrics {
         }
     }
     pub async fn push_metrics(&self) {
-        push_metrics(
-            "mb-ia-archiver",
-            labels! {"pushgateway".to_string() => "rust".to_string()},
-            "pushgateway:9091",
-            self.registry.lock().await.gather(),
-            None,
-        )
-        .unwrap()
+        let registry = self.registry.clone();
+        spawn_blocking(move || {
+            push_metrics(
+                "mb-ia-archiver",
+                labels! {"pushgateway".to_string() => "rust".to_string()},
+                "pushgateway:9091",
+                registry.blocking_lock().gather(),
+                None,
+            )
+            .unwrap();
+        })
+        .await
+        .unwrap();
     }
 }

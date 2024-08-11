@@ -62,18 +62,19 @@ There are 2 methods to run the program:
       ```
 
 #### Setting up Prometheus, Grafana
+
 1. On your browser, go to `localhost:3000`, to access grafana. Login using admin as username and password.
-   ![img.png](assets/grafana_login_page.png)
-2. Add Prometheus as Data Source.
-![img_1.png](assets/add_data_source_screen.png)
-3. Enter `http://prometheus:9090` in prometheus server URL, and press `Save and Test`.
-![img_2.png](assets/prometheus_server_url.png)
-4. Go to Dashboards, and press `Create Dashboards` -> `Add Visualization` -> Choose `prometheus`.
-![img_3.png](assets/dashboard_with_prometheus.png)
-5. Now choose metrics:
-    > - Currently, there are 2 example metrics which collect db polls and network requests.
-   - `db_polls_total`
-   - `network_requests_total`
-      ![img_4.png](assets/dashboard_metric_explorer.png)
-6. Run the queries
-![img_5.png](assets/working_grafana_dashboard.png)
+
+    ![img.png](assets/grafana_login_page.png)
+
+2. Go to Dashboard. Select `mb-ia-dashboard`.
+
+    ![img.png](assets/mb-ia-dashboard.png)
+
+3. If the `Rust app metrics panel` shows no data, just click on the refresh icon on top right corner. 
+
+    ![img.png](assets/mb-ia-dashboard-rust-panel.png)   
+
+4. To edit, right-click on the panel and select edit option. You can edit the panel, and save the generated json in `grafana/dashboards/metrics-dashboard.json`.
+
+    ![img.png](assets/working_grafana_dashboard.png)

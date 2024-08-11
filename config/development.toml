@@ -1,8 +1,8 @@
 debug = true
 
 [wayback_machine_api]
-myaccesskey = "XfNaisRR7DPZzfXb"
-mysecret =  "D08VtriL9Whr6Ydq"
+myaccesskey = "OqvSkX8Sv5hblwrv"
+mysecret =  "tjow7aOFJAWokDsX"
 
 [retry_task]
 retry_interval = 120 # 2 min

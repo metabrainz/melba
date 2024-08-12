@@ -1,0 +1,50 @@
+
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - name: Formatting
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: fmt
+          args: --check
+        continue-on-error: true
+      - name: Cargo Check
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: check
+          args: --all-targets --all-features --locked
+        continue-on-error: true
+      - name: Linting
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: clippy
+          args: --all-targets --all-features --locked -- -D warnings
+        continue-on-error: true
+      - name: Tests
+        run: |
+          cargo test

@@ -25,8 +25,5 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --target x86_64-unknown-linux-gnu && \
     cp ./target/x86_64-unknown-linux-gnu/debug/mb-ia /app/mb-ia
 
-# List files in the current directory for debugging
-RUN ls -l /app
-
 # Set the working directory to /app and run the binary
 CMD ["/app/mb-ia"]

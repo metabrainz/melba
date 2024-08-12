@@ -189,34 +189,13 @@ pub fn should_exclude_url(url: &str) -> bool {
     keywords.iter().any(|keyword| url.contains(keyword))
 }
 
-///This function checks if we are inserting the same url within a day into the internet_archive_urls table
-pub async fn should_insert_url_to_internet_archive_urls(
-    url: &str,
-    pool: &PgPool,
-) -> Result<bool, Error> {
-    if should_exclude_url(url) {
-        return Ok(false);
-    }
-    let res: Option<(bool,)> = sqlx::query_as(
-        r#"
-        SELECT (CURRENT_TIMESTAMP - created_at) > INTERVAL '1 DAY' AS daydiff
-        FROM external_url_archiver.internet_archive_urls
-        WHERE url = $1
-        "#,
-    )
-    .bind(url)
-    .fetch_optional(pool)
-    .await?;
-    Ok(res.map(|(daydiff,)| daydiff).unwrap_or(true))
-}
-
 pub async fn save_url_to_internet_archive_urls(
     url: &str,
     from_table: &str,
     from_table_id: i32,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    if !should_insert_url_to_internet_archive_urls(url, pool).await? {
+    if should_exclude_url(url) {
         return Ok(());
     }
     let query = r#"

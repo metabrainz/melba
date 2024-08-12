@@ -48,10 +48,16 @@ pub async fn retry_and_cleanup_ia_row(
     match row.status.try_into() {
         // If the URL status is failed, then we can remove it from the table (Case when still can't archive after 3 retries)
         Ok(ArchivalStatus::Failed) => {
-            sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls WHERE id = $1")
+            if duration_since_creation
+                >= Duration::seconds(settings.retry_task.allow_remove_row_after)
+            {
+                sqlx::query(
+                    "DELETE FROM external_url_archiver.internet_archive_urls WHERE id = $1",
+                )
                 .bind(row.id)
                 .execute(pool)
                 .await?;
+            }
         }
         Ok(ArchivalStatus::StatusError) => {
             // If the URL cannot be archived due to Permanent errors, we can remove them from the table

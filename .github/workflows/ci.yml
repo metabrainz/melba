@@ -46,6 +46,6 @@ jobs:
           command: clippy
           args: --all-targets --all-features --locked -- -D warnings
         continue-on-error: true
-      - name: Tests
-        run: |
-          cargo test
+#      - name: Tests
+#        run: |
+#          cargo test

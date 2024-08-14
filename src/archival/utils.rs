@@ -155,6 +155,7 @@ pub async fn schedule_status_check(
                 archival_status_response.status.as_str(),
             )
             .await?;
+            metrics.record_archival_status("success").await;
             return Ok(());
         } else {
             if attempt == 3 {
@@ -169,6 +170,7 @@ pub async fn schedule_status_check(
                 )
                 .await?;
             }
+            metrics.record_archival_status("error").await;
             eprintln!("Could not archive: {} attempt", attempt)
         }
     }

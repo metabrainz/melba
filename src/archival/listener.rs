@@ -5,6 +5,7 @@ use crate::archival::utils::{
 
 use crate::archival::error::ArchivalError;
 use crate::configuration::Settings;
+use crate::metrics::Metrics;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sentry::Level::Error;
 use sqlx::postgres::PgListener;
@@ -33,6 +34,7 @@ pub async fn handle_payload(
     url_row: InternetArchiveUrls,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
+    let metrics = Metrics::new().await;
     if let Some(url) = url_row.url {
         let id = url_row.id;
         if url_row.retry_count >= Some(3) {
@@ -46,6 +48,7 @@ pub async fn handle_payload(
             set_status_with_message(pool, id, ArchivalStatus::Failed as i32, status_ext.as_str())
                 .await?;
             sentry::capture_message(status_ext.as_str(), Error);
+            metrics.record_archival_status("failed").await;
         } else {
             let archival_result = archive(url, url_row.id, pool).await;
             if let Err(e) = archival_result {

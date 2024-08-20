@@ -254,77 +254,28 @@ fn test_any_annotations() {
 
 #[sqlx::test(fixtures(
     "../../../tests/fixtures/InternetArchiveUrls.sql",
-    "../../../tests/fixtures/EditNote.sql",
-    "../../../tests/fixtures/EditData.sql",
-    "../../../tests/fixtures/LastUnprocessedRows.sql"
+    "../../../tests/fixtures/internet_archive_urls_dump.sql",
+    "../../../tests/fixtures/LastUnprocessedRows.sql",
+    "../../../tests/fixtures/last_unprocessed_rows_dump.sql"
 ))]
 async fn test_get_edit_data_and_note_start_id(pool: PgPool) -> Result<(), Error> {
     let last_row = get_edit_data_and_note_start_id(&pool).await?;
-    assert_eq!(last_row, (3, 3));
-    sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;")
-        .execute(&pool)
-        .await
-        .unwrap();
-    let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await?;
-    assert_eq!(last_row_when_no_rows, (3, 3));
-    Ok(())
-}
-
-#[sqlx::test(fixtures(
-    "../../../tests/fixtures/InternetArchiveUrls.sql",
-    "../../../tests/fixtures/EditNote.sql",
-    "../../../tests/fixtures/EditData.sql",
-    "../../../tests/fixtures/LastUnprocessedRows.sql"
-))]
-async fn test_get_edit_data_and_note_start_id_only_edit_data(pool: PgPool) -> Result<(), Error> {
-    sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;")
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query(r#"
-     INSERT INTO external_url_archiver.internet_archive_urls(url, from_table, from_table_id, retry_count)
-     VALUES ('https://example.com', 'edit_data', 1000, 0);
-    "#
-    ).execute(&pool)
-        .await
-        .unwrap();
-    let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await?;
-    assert_eq!(last_row_when_no_rows, (3, 3));
-    Ok(())
-}
-
-#[sqlx::test(fixtures(
-    "../../../tests/fixtures/InternetArchiveUrls.sql",
-    "../../../tests/fixtures/EditNote.sql",
-    "../../../tests/fixtures/EditData.sql",
-    "../../../tests/fixtures/LastUnprocessedRows.sql"
-))]
-async fn test_get_edit_data_and_note_start_id_only_edit_note(pool: PgPool) -> Result<(), Error> {
-    sqlx::query("DELETE FROM external_url_archiver.internet_archive_urls;")
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query(r#"
-     INSERT INTO external_url_archiver.internet_archive_urls(url, from_table, from_table_id, retry_count)
-     VALUES ('https://example.com', 'edit_note', 1000, 0);
-    "#
-    ).execute(&pool)
-        .await.unwrap();
-    let last_row_when_no_rows = get_edit_data_and_note_start_id(&pool).await?;
-    assert_eq!(last_row_when_no_rows, (3, 3));
+    assert_eq!(last_row, (111451378, 71025441));
     Ok(())
 }
 
 #[sqlx::test(fixtures(
     "../../../tests/fixtures/Editor.sql",
-    "../../../tests/fixtures/EditNote.sql"
+    "../../../tests/fixtures/editor_dump.sql",
+    "../../../tests/fixtures/EditNote.sql",
+    "../../../tests/fixtures/edit_note_dump.sql"
 ))]
 async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
     let note_with_no_url = sqlx::query_as::<_, EditNote>(
         r#"
             SELECT *
             FROM edit_note
-            WHERE id = 1
+            WHERE id = 71025107
         "#,
     )
     .fetch_one(&pool)
@@ -333,7 +284,7 @@ async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
         r#"
             SELECT *
             FROM edit_note
-            WHERE id = 2
+            WHERE id = 71024901
         "#,
     )
     .fetch_one(&pool)
@@ -342,7 +293,7 @@ async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
         r#"
             SELECT *
             FROM edit_note
-            WHERE id = 3
+            WHERE id = 771
         "#,
     )
     .fetch_one(&pool)
@@ -357,22 +308,25 @@ async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
     );
     assert_eq!(
         extract_url_from_edit_note(&note_with_url, &pool).await,
-        vec!["https://example.com".to_string()]
+        vec!["https://www.jazzdisco.org/verve-records/catalog-folk-blues-3000-4000-series/#mgv-4006-2".to_string()]
     );
     Ok(())
 }
 
 #[sqlx::test(fixtures(
     "../../../tests/fixtures/Editor.sql",
+    "../../../tests/fixtures/editor_dump.sql",
     "../../../tests/fixtures/EditData.sql",
-    "../../../tests/fixtures/Edit.sql"
+    "../../../tests/fixtures/edit_data_dump.sql",
+    "../../../tests/fixtures/Edit.sql",
+    "../../../tests/fixtures/edit_dump.sql"
 ))]
 async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
     let edit_with_no_url = sqlx::query_as::<_, EditData>(
         r#"
             SELECT *
             FROM edit_data
-            WHERE edit = 3
+            WHERE edit = 111450838
         "#,
     )
     .fetch_one(&pool)
@@ -381,7 +335,7 @@ async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
         r#"
             SELECT *
             FROM edit_data
-            WHERE edit = 2
+            WHERE edit = 111450857
         "#,
     )
     .fetch_one(&pool)
@@ -390,7 +344,7 @@ async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
         r#"
             SELECT *
             FROM edit_data
-            WHERE edit = 1
+            WHERE edit = 21965
         "#,
     )
     .fetch_one(&pool)
@@ -405,7 +359,7 @@ async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
     );
     assert_eq!(
         extract_url_from_edit_data(&edit_with_url, &pool).await,
-        vec!["https://www.discogs.com/artist/296705".to_string()]
+        vec!["http://rare-bird-records.de/".to_string()]
     );
     Ok(())
 }

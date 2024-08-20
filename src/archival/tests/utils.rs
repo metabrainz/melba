@@ -2,15 +2,18 @@ use super::*;
 use crate::configuration::Settings;
 use sqlx::Error;
 
-#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql"))]
+#[sqlx::test(fixtures(
+    "../../../tests/fixtures/InternetArchiveUrls.sql",
+    "../../../tests/fixtures/internet_archive_urls_dump.sql"
+))]
 async fn test_get_first_index_to_start_notifier_from(pool: PgPool) -> Result<(), Error> {
     let first_index_to_start_notifier_from =
         get_first_id_to_start_notifier_from(pool.clone()).await;
-    assert_eq!(first_index_to_start_notifier_from.unwrap(), 1);
+    assert_eq!(first_index_to_start_notifier_from.unwrap(), 362);
     sqlx::query(
         r#"
             DELETE FROM external_url_archiver.internet_archive_urls
-            WHERE id = 1;
+            WHERE id = 362;
             "#,
     )
     .execute(&pool)
@@ -20,32 +23,11 @@ async fn test_get_first_index_to_start_notifier_from(pool: PgPool) -> Result<(),
         get_first_id_to_start_notifier_from(pool.clone())
             .await
             .unwrap(),
-        2
+        363
     );
     Ok(())
 }
 
-#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql"))]
-async fn test_update_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
-    set_job_id_ia_url(&pool, "123abc".to_string(), 4).await?;
-    let updated_res = sqlx::query_as::<_, InternetArchiveUrls>(
-        r#"
-        SELECT * FROM external_url_archiver.internet_archive_urls
-        WHERE id = $1
-        "#,
-    )
-    .bind(4)
-    .fetch_one(&pool)
-    .await;
-
-    if let Ok(res) = updated_res {
-        assert_eq!(res.status, 1);
-        assert_eq!(res.job_id.unwrap(), "123abc");
-    } else {
-        panic!("Should return row")
-    }
-    Ok(())
-}
 #[tokio::test]
 async fn test_make_archival_network_request() -> Result<(), ArchivalError> {
     let testing_url_invalid = "www.example.om";

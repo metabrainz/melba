@@ -1,4 +1,6 @@
-CREATE TABLE edit_note (
+CREATE SCHEMA IF NOT EXISTS musicbrainz;
+
+CREATE TABLE musicbrainz.edit_note (
     id                  SERIAL,
     editor              INTEGER NOT NULL, -- references editor.id
     edit                INTEGER NOT NULL, -- references edit.id
@@ -6,7 +8,5 @@ CREATE TABLE edit_note (
     post_time            TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-INSERT INTO edit_note(editor, edit, text) VALUES
-(1, 111451706, 'Same recording; one has incorrect duration'),
-(2, 111451706, 'https://example.com'),
-(3, 111451711, 'https://seraphitus-seraphita.bandcamp.com/album/cosmic-horrors-iii * https://f4.bcbits.com/img/a2736839660_10.jpg → Maximised to https://f4.bcbits.com/img/a2736839660_0.jpg -  MB: Enhanced Cover Art Uploads 2024.5.1 https://github.com/ROpdebee/mb-userscripts')
+-- Spammer editor
+INSERT INTO musicbrainz.edit_note (id, editor, edit, text, post_time) VALUES (771, 1, 85521, 'This edit moderation clashes with an existing item in the database.', NULL);

@@ -1,4 +1,4 @@
-CREATE SCHEMA external_url_archiver;
+CREATE SCHEMA IF NOT EXISTS external_url_archiver;
 
 CREATE TABLE external_url_archiver.internet_archive_urls (
         id                  serial,
@@ -26,10 +26,3 @@ RETURNS INTEGER AS $$
         RETURN count;
     END;
 $$ LANGUAGE 'plpgsql';
-
-INSERT INTO external_url_archiver.internet_archive_urls(url, from_table, from_table_id, retry_count) VALUES
-('https://blackpaintingsdiscography.bndcamp.com/album/asmodea', 'edit_note', 70000000, 0),
-('https://blackpaintingsdiscography.bandcamp.com/album/the-dog', 'edit_note', 70000003, 0),
-('http://finaltape.bandcamp.com/', 'edit_data', 48470688, 0),
-('http://secondfinaltape.bandcamp.com/', 'edit_data', 48470689, 0),
-('https://myspace.com/killbillg', 'edit_data', 48470708, 0);

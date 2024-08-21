@@ -1,4 +1,4 @@
-mod looper;
+pub mod looper;
 pub mod utils;
 
 use crate::poller::utils::{get_edit_data_and_note_start_id, update_last_unprocessed_rows};

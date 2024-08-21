@@ -28,12 +28,12 @@ dump_table() {
     if [[ "$table" == "musicbrainz.edit_data" ]]; then
         PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
         CREATE TABLE $schema_name.$new_table_name AS
-        SELECT * FROM $table WHERE edit >= 111450838 ORDER BY edit LIMIT 1000;
+        SELECT * FROM $table WHERE edit >= 111450838 ORDER BY edit LIMIT 100;
         "
     elif [[ "$table" == "musicbrainz.edit_note" ]]; then
         PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
         CREATE TABLE $schema_name.$new_table_name AS
-        SELECT * FROM $table WHERE id >= 71024901 ORDER BY id LIMIT 1000;
+        SELECT * FROM $table WHERE id >= 71024901 ORDER BY id LIMIT 100;
         "
     elif [[ "$table" == "musicbrainz.edit" ]]; then
         PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
@@ -53,7 +53,7 @@ dump_table() {
     else
         PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
         CREATE TABLE $schema_name.$new_table_name AS
-        SELECT * FROM $table LIMIT 1000;
+        SELECT * FROM $table LIMIT 100;
         "
     fi
 

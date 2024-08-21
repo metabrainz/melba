@@ -1,3 +1,4 @@
+pub mod app;
 pub mod archival;
 pub mod configuration;
 pub mod metrics;

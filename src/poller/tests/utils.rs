@@ -260,7 +260,7 @@ fn test_any_annotations() {
 ))]
 async fn test_get_edit_data_and_note_start_id(pool: PgPool) -> Result<(), Error> {
     let last_row = get_edit_data_and_note_start_id(&pool).await?;
-    assert_eq!(last_row, (111451378, 71025441));
+    assert_eq!(last_row, (111450838, 71024901));
     Ok(())
 }
 
@@ -275,7 +275,7 @@ async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
         r#"
             SELECT *
             FROM edit_note
-            WHERE id = 71025107
+            WHERE id = 71024940
         "#,
     )
     .fetch_one(&pool)

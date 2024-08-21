@@ -20,8 +20,8 @@ SET row_security = off;
 -- Data for Name: backup_last_unprocessed_rows; Type: TABLE DATA; Schema: external_url_archiver; Owner: -
 --
 
-INSERT INTO external_url_archiver.last_unprocessed_rows (id_column, table_name) VALUES (111451378, 'edit_data');
-INSERT INTO external_url_archiver.last_unprocessed_rows (id_column, table_name) VALUES (71025441, 'edit_note');
+INSERT INTO external_url_archiver.last_unprocessed_rows (id_column, table_name) VALUES (111450838, 'edit_data');
+INSERT INTO external_url_archiver.last_unprocessed_rows (id_column, table_name) VALUES (71024901, 'edit_note');
 
 
 --

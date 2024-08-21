@@ -115,8 +115,9 @@ fn extract_url_from_edit_url(json: &JsonValue) -> Option<String> {
 }
 
 fn extract_url_from_any_annotation(json: &JsonValue) -> Option<Vec<String>> {
-    if json.get("text").is_some() {
-        let result = extract_urls_from_text(json["text"].as_str().unwrap());
+    let text = json.get("text");
+    if text.is_some() && !text.unwrap().is_null() {
+        let result = extract_urls_from_text(json.get("text").unwrap().as_str().unwrap());
         if !result.is_empty() {
             return Some(result);
         };

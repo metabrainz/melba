@@ -39,7 +39,7 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
 /// then add it to `internet_archive_urls` table
 ///
 /// ⚠️ This must be awaited twice. Once to get the `JoinHandle`, and a second to start the task
-async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
+pub async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
     let settings = Settings::new().expect("Config settings are not configured properly");
     let mut poller = Poller::new(settings.poller_task.poll_interval, db_pool.clone())
         .await

@@ -268,7 +268,8 @@ async fn test_get_edit_data_and_note_start_id(pool: PgPool) -> Result<(), Error>
     "../../../tests/fixtures/Editor.sql",
     "../../../tests/fixtures/editor_dump.sql",
     "../../../tests/fixtures/EditNote.sql",
-    "../../../tests/fixtures/edit_note_dump.sql"
+    "../../../tests/fixtures/edit_note_dump.sql",
+    "../../../tests/fixtures/InitSpammer.sql"
 ))]
 async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
     let note_with_no_url = sqlx::query_as::<_, EditNote>(
@@ -319,7 +320,8 @@ async fn test_extract_url_from_edit_note(pool: PgPool) -> Result<(), Error> {
     "../../../tests/fixtures/EditData.sql",
     "../../../tests/fixtures/edit_data_dump.sql",
     "../../../tests/fixtures/Edit.sql",
-    "../../../tests/fixtures/edit_dump.sql"
+    "../../../tests/fixtures/edit_dump.sql",
+    "../../../tests/fixtures/InitSpammer.sql"
 ))]
 async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
     let edit_with_no_url = sqlx::query_as::<_, EditData>(

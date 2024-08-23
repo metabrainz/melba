@@ -7,6 +7,3 @@ CREATE TABLE musicbrainz.edit_note (
     text                TEXT NOT NULL,
     post_time            TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-
--- Spammer editor
-INSERT INTO musicbrainz.edit_note (id, editor, edit, text, post_time) VALUES (771, 1, 85521, 'This edit moderation clashes with an existing item in the database.', NULL);

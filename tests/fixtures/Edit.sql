@@ -13,6 +13,3 @@ CREATE TABLE musicbrainz.edit
     language            INTEGER, -- references language.id
     quality             SMALLINT NOT NULL DEFAULT 1
 );
-
--- Entry for spammer editor
-INSERT INTO musicbrainz.edit (id, editor, type, status, autoedit, open_time, close_time, expire_time, language, quality) VALUES (21965, 1, 207, 3, 0, '2000-11-14 11:51:55+00', '2000-11-16 11:51:55+00', '2000-11-16 03:51:55+00', NULL, 1);

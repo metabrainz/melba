@@ -16,9 +16,11 @@ backup_tables=()
 
 # Function to create, verify, dump a new table
 dump_table() {
-    local table=$1
-    local schema_name=$(echo $table | awk -F '.' '{print $1}')
-    local base_name=$(echo $table | awk -F '.' '{print $2}')
+    local table="$1"
+    local schema_name
+    schema_name=$(echo "$table" | awk -F '.' '{print $1}')
+    local base_name
+    base_name=$(echo "$table" | awk -F '.' '{print $2}')
     local new_table_name="backup_${base_name}"
     local filepath="$dump_dir/${base_name}_dump.sql"
 
@@ -26,23 +28,23 @@ dump_table() {
 
     # Create the new table in the correct schema
     if [[ "$table" == "musicbrainz.edit_data" ]]; then
-        PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
+        PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
         CREATE TABLE $schema_name.$new_table_name AS
         SELECT * FROM $table WHERE edit >= 111450838 ORDER BY edit LIMIT 100;
         "
     elif [[ "$table" == "musicbrainz.edit_note" ]]; then
-        PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
+        PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
         CREATE TABLE $schema_name.$new_table_name AS
         SELECT * FROM $table WHERE id >= 71024901 ORDER BY id LIMIT 100;
         "
     elif [[ "$table" == "musicbrainz.edit" ]]; then
-        PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
+        PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
         CREATE TABLE $schema_name.$new_table_name AS
         SELECT * FROM $table WHERE id IN (SELECT edit FROM $schema_name.backup_edit_data);
         "
     elif [[ "$table" == "musicbrainz.editor" ]]; then
         echo "Selected editor IDs for $table:"
-        PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
+        PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
         CREATE TABLE $schema_name.$new_table_name AS
         SELECT * FROM $table WHERE id IN (
             SELECT editor FROM $schema_name.backup_edit_note
@@ -51,13 +53,13 @@ dump_table() {
         );
         "
     else
-        PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
+        PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
         CREATE TABLE $schema_name.$new_table_name AS
         SELECT * FROM $table LIMIT 100;
         "
     fi
 
-    if [ $? -ne 0 ]; then
+    if ! PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1;" > /dev/null 2>&1; then
         echo "Failed to create table $schema_name.$new_table_name for $table"
         exit 1
     fi
@@ -70,9 +72,9 @@ dump_table() {
     # Dump the new table
     touch "$filepath"
     echo "Dumping table $schema_name.$new_table_name to $filepath..."
-    PGPASSWORD=$PGPASSWORD pg_dump -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE --data-only --table=$schema_name.$new_table_name --inserts --column-inserts --no-owner --no-privileges -f "$filepath"
+    PGPASSWORD="$PGPASSWORD" pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" --data-only --table="$schema_name.$new_table_name" --inserts --column-inserts --no-owner --no-privileges -f "$filepath"
 
-    if [ $? -ne 0 ]; then
+    if ! PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1;" > /dev/null 2>&1; then
         echo "Failed to dump table $schema_name.$new_table_name"
         exit 1
     fi
@@ -85,17 +87,17 @@ dump_table() {
 
 # Dump the specific tables first
 for table in "${tables[@]}"; do
-    dump_table $table
+    dump_table "$table"
 done
 
 # Drop all backup tables after dumping
 for backup_table in "${backup_tables[@]}"; do
     echo "Dropping table $backup_table..."
-    PGPASSWORD=$PGPASSWORD psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -c "
+    PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
     DROP TABLE IF EXISTS $backup_table;
     "
 
-    if [ $? -ne 0 ]; then
+    if ! PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1;" > /dev/null 2>&1; then
         echo "Failed to drop table $backup_table"
         exit 1
     fi

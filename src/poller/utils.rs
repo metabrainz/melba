@@ -177,6 +177,41 @@ pub async fn get_edit_data_and_note_start_id(pool: &PgPool) -> Result<(i32, i32)
     })
 }
 
+///This function checks if the URL is already present in `internet_archive_urls` table
+pub async fn should_insert_url_to_internet_archive_urls(
+    url: &str,
+    pool: &PgPool,
+) -> Result<bool, Error> {
+    if should_exclude_url(url) {
+        return Ok(false);
+    }
+    match is_url_exists(url, pool).await {
+        Ok(exists) => Ok(!exists), // If the URL exists, return false; otherwise, return true.
+        Err(_) => Ok(true),        // On error, default to true
+    }
+}
+
+pub async fn is_url_exists(url: &str, pool: &PgPool) -> Result<bool, Error> {
+    let res: Option<(bool,)> = sqlx::query_as(
+        r#"
+        SELECT EXISTS (
+            SELECT 1 as present
+            FROM external_url_archiver.internet_archive_urls
+            WHERE url = $1
+        );
+        "#,
+    )
+    .bind(url)
+    .fetch_optional(pool)
+    .await?;
+    if res.is_some() {
+        let bool_val = res.unwrap().0;
+        Ok(bool_val)
+    } else {
+        Ok(false)
+    }
+}
+
 /// This function takes input a URL string, and returns true if it should exclude the URL from saving
 pub fn should_exclude_url(url: &str) -> bool {
     // TODO: discuss and add keywords to identify URLs we want to exclude
@@ -196,7 +231,7 @@ pub async fn save_url_to_internet_archive_urls(
     from_table_id: i32,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    if should_exclude_url(url) {
+    if !should_insert_url_to_internet_archive_urls(url, pool).await? {
         return Ok(());
     }
     let query = r#"

@@ -34,7 +34,7 @@ async fn test_poller(pool: PgPool) -> Result<(), sqlx::Error> {
             .await?;
         let first_row = rows.first().unwrap();
         let rows_len = rows.len();
-        assert_eq!(rows_len, 10);
+        assert_eq!(rows_len, 1);
         assert_eq!(first_row.url, Some("https://www.jazzdisco.org/verve-records/catalog-folk-blues-3000-4000-series/#mgv-4006-2".to_string()));
         assert_eq!(edit_data_new_row, Some(111450848));
         assert_eq!(edit_note_new_row, Some(71024911));

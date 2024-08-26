@@ -53,4 +53,7 @@ impl Notifier {
             true
         }
     }
+    pub fn _get_notifier_index(&self) -> i32 {
+        self.start_notifier_from.unwrap()
+    }
 }

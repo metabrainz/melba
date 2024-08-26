@@ -9,11 +9,11 @@ use sqlx::Error;
 async fn test_get_first_index_to_start_notifier_from(pool: PgPool) -> Result<(), Error> {
     let first_index_to_start_notifier_from =
         get_first_id_to_start_notifier_from(pool.clone()).await;
-    assert_eq!(first_index_to_start_notifier_from.unwrap(), 362);
+    assert_eq!(first_index_to_start_notifier_from.unwrap(), 12);
     sqlx::query(
         r#"
             DELETE FROM external_url_archiver.internet_archive_urls
-            WHERE id = 362;
+            WHERE id = 12;
             "#,
     )
     .execute(&pool)
@@ -23,7 +23,7 @@ async fn test_get_first_index_to_start_notifier_from(pool: PgPool) -> Result<(),
         get_first_id_to_start_notifier_from(pool.clone())
             .await
             .unwrap(),
-        363
+        13
     );
     Ok(())
 }

@@ -34,6 +34,7 @@ impl TryFrom<i32> for ArchivalStatus {
 pub struct InternetArchiveUrls {
     pub id: i32,
     pub url: Option<String>,
+    #[allow(dead_code)]
     pub job_id: Option<String>,
     #[allow(dead_code)]
     pub from_table: Option<String>,

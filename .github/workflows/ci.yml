@@ -10,7 +10,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SQLX_OFFLINE: true
 
 jobs:
   test:
@@ -20,32 +19,81 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: musicbrainz
+          POSTGRES_PASSWORD: musicbrainz
+          POSTGRES_DB: musicbrainz_db
+        ports:
+          - 5433:5432  # Change host port to 5433, container port stays 5432
+        options: >-
+          --health-cmd "pg_isready -U musicbrainz" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5433 -U musicbrainz; do
+            echo "Waiting for PostgreSQL to start..."
+            sleep 1
+          done
+
+      - name: Populate Test Data
+        env:
+          PGPASSWORD: musicbrainz
+        run: |
+          for sql_file in ./tests/fixtures/*.sql; do
+            psql -h localhost -p 5433 -U musicbrainz -d musicbrainz_db -f "$sql_file"
+          done
+
+      - name: Verify Table Existence
+        env:
+          PGPASSWORD: musicbrainz
+        run: |
+          psql -h localhost -p 5433 -U musicbrainz -d musicbrainz_db -c '\dt external_url_archiver.internet_archive_urls'
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache: false
+
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+
       - name: Formatting
         uses: clechasseur/rs-cargo@v2
         with:
           command: fmt
           args: --check
         continue-on-error: true
+
       - name: Cargo Check
         uses: clechasseur/rs-cargo@v2
         with:
           command: check
           args: --all-targets --all-features --locked
         continue-on-error: true
+
       - name: Linting
         uses: clechasseur/rs-cargo@v2
         with:
           command: clippy
           args: --all-targets --all-features --locked -- -D warnings
         continue-on-error: true
-#      - name: Tests
-#        run: |
-#          cargo test
+
+      - name: Run Tests
+        env:
+          DATABASE_URL: postgres://musicbrainz:musicbrainz@localhost:5433/musicbrainz_db
+        run: cargo test -- --nocapture

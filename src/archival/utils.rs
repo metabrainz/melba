@@ -199,6 +199,7 @@ pub async fn set_status_with_message(
     Ok(())
 }
 
+/// Job IDs that have permanent errors in `status_ext` will not be archived, hence we can remove them from `internet_archive_urls` table.
 pub fn check_if_permanent_error(status_ext: &str) -> bool {
     let permanent_errors = vec![
         "error:bad-request",

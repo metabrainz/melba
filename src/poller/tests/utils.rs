@@ -373,24 +373,15 @@ async fn test_should_insert_url_to_internet_archive_urls(pool: PgPool) -> Result
     let url3 = "www.example2.com";
     let url4 = "www.example.com";
 
-    assert_eq!(
-        should_insert_url_to_internet_archive_urls(url1, &pool)
-            .await
-            .unwrap(),
-        false
-    );
-    assert_eq!(
-        should_insert_url_to_internet_archive_urls(url2, &pool)
-            .await
-            .unwrap(),
-        true
-    );
-    assert_eq!(
-        should_insert_url_to_internet_archive_urls(url3, &pool)
-            .await
-            .unwrap(),
-        true
-    );
+    assert!(!should_insert_url_to_internet_archive_urls(url1, &pool)
+        .await
+        .unwrap());
+    assert!(should_insert_url_to_internet_archive_urls(url2, &pool)
+        .await
+        .unwrap());
+    assert!(should_insert_url_to_internet_archive_urls(url3, &pool)
+        .await
+        .unwrap());
 
     sqlx::query("INSERT INTO external_url_archiver.internet_archive_urls 
     (id, url, job_id, from_table, from_table_id, created_at, retry_count, status, status_message) 
@@ -399,12 +390,9 @@ async fn test_should_insert_url_to_internet_archive_urls(pool: PgPool) -> Result
         .execute(&pool)
         .await?;
 
-    assert_eq!(
-        should_insert_url_to_internet_archive_urls(url4, &pool)
-            .await
-            .unwrap(),
-        false
-    );
+    assert!(!should_insert_url_to_internet_archive_urls(url4, &pool)
+        .await
+        .unwrap());
     Ok(())
 }
 

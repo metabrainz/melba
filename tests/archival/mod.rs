@@ -71,7 +71,6 @@ async fn test_archival(pool: PgPool) -> Result<(), ArchivalError> {
                     let payload: InternetArchiveUrls =
                         serde_json::from_str(notification.payload()).unwrap();
                     assert!(payload.url.is_some());
-                    println!("{} {}", start_time.elapsed().as_secs(), payload.id);
                     handle_payload(payload, &listener_pool).await.unwrap();
                 }
 

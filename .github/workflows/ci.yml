@@ -45,7 +45,7 @@ jobs:
 
       - name: Wait for PostgreSQL
         run: |
-          until pg_isready -h localhost -p 5433 -U musicbrainz; do
+          until pg_isready -h localhost -p 5432 -U musicbrainz; do
             echo "Waiting for PostgreSQL to start..."
             sleep 1
           done
@@ -55,14 +55,14 @@ jobs:
           PGPASSWORD: musicbrainz
         run: |
           for sql_file in ./tests/fixtures/*.sql; do
-            psql -h localhost -p 5433 -U musicbrainz -d musicbrainz_db -f "$sql_file"
+            psql -h localhost -p 5432 -U musicbrainz -d musicbrainz_db -f "$sql_file"
           done
 
       - name: Verify Table Existence
         env:
           PGPASSWORD: musicbrainz
         run: |
-          psql -h localhost -p 5433 -U musicbrainz -d musicbrainz_db -c '\dt external_url_archiver.internet_archive_urls'
+          psql -h localhost -p 5432 -U musicbrainz -d musicbrainz_db -c '\dt external_url_archiver.internet_archive_urls'
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -95,5 +95,5 @@ jobs:
 
       - name: Run Tests
         env:
-          DATABASE_URL: postgres://musicbrainz:musicbrainz@localhost:5433/musicbrainz_db
+          DATABASE_URL: postgres://musicbrainz:musicbrainz@localhost:5432/musicbrainz_db
         run: cargo test -- --nocapture

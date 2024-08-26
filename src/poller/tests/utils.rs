@@ -365,3 +365,64 @@ async fn test_extract_url_from_edit_data(pool: PgPool) -> Result<(), Error> {
     );
     Ok(())
 }
+
+#[sqlx::test(fixtures("../../../tests/fixtures/InternetArchiveUrls.sql"))]
+async fn test_should_insert_url_to_internet_archive_urls(pool: PgPool) -> Result<(), Error> {
+    let url1 = "www.musicbrainz.org";
+    let url2 = "www.example.com";
+    let url3 = "www.example2.com";
+    let url4 = "www.example.com";
+
+    assert_eq!(
+        should_insert_url_to_internet_archive_urls(url1, &pool)
+            .await
+            .unwrap(),
+        false
+    );
+    assert_eq!(
+        should_insert_url_to_internet_archive_urls(url2, &pool)
+            .await
+            .unwrap(),
+        true
+    );
+    assert_eq!(
+        should_insert_url_to_internet_archive_urls(url3, &pool)
+            .await
+            .unwrap(),
+        true
+    );
+
+    sqlx::query("INSERT INTO external_url_archiver.internet_archive_urls 
+    (id, url, job_id, from_table, from_table_id, created_at, retry_count, status, status_message) 
+    VALUES (1, 'www.example.com', NULL, 'edit_note', 71024937, '2024-08-25 14:18:47.891132+00', 0, 1, NULL);
+        ")
+        .execute(&pool)
+        .await?;
+
+    assert_eq!(
+        should_insert_url_to_internet_archive_urls(url4, &pool)
+            .await
+            .unwrap(),
+        false
+    );
+    Ok(())
+}
+
+#[sqlx::test(fixtures(
+    "../../../tests/fixtures/LastUnprocessedRows.sql",
+    "../../../tests/fixtures/last_unprocessed_rows_dump.sql"
+))]
+async fn test_update_last_unprocessed_rows(pool: PgPool) -> Result<(), Error> {
+    let last_row = get_edit_data_and_note_start_id(&pool).await?;
+    assert_eq!(last_row, (111450838, 71024901));
+    update_last_unprocessed_rows("edit_data", 111450839, &pool)
+        .await
+        .unwrap();
+    update_last_unprocessed_rows("edit_note", 71024902, &pool)
+        .await
+        .unwrap();
+    let new_last_row = get_edit_data_and_note_start_id(&pool).await?;
+    assert_eq!(new_last_row, (111450839, 71024902));
+
+    Ok(())
+}

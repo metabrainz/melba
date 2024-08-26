@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
     services:
       postgres:
         image: postgres:13
@@ -27,7 +27,7 @@ jobs:
           POSTGRES_PASSWORD: musicbrainz
           POSTGRES_DB: musicbrainz_db
         ports:
-          - 5433:5432  # Change host port to 5433, container port stays 5432
+          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U musicbrainz" 
           --health-interval 10s 

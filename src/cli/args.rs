@@ -18,20 +18,13 @@ pub struct CliArgs {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     ///Queue a single URL to be archived in Internet Archive History
-    QueueURL {
-        url: Option<String>,
-    },
-    /// Queue a Edit Data row to be archived in Internet Archive History
-    QueueEditData {
-        row_id: Option<i32>,
-    },
-    /// Queue a Edit Note row to be archived in Internet Archive History
-    QueueEditNote {
-        row_id: Option<i32>,
-    },
-    CheckStatus {
-        job_id: Option<String>,
-    },
+    QueueURL { url: String },
+    /// Queue an Edit Data row to be archived in Internet Archive History
+    QueueEditData { row_id: i32 },
+    /// Queue an Edit Note row to be archived in Internet Archive History
+    QueueEditNote { row_id: i32 },
+    /// Check the archival status of any URL by `job_id`
+    CheckStatus { job_id: String },
     /// Start the app to poll from Edit Data and Edit Note tables. It is the default behaviour
     Poll,
 }

@@ -1,4 +1,8 @@
+use crate::archival::archival_response::ArchivalStatusResponse;
+use crate::archival::error::ArchivalError;
+use crate::archival::utils::make_archival_status_request;
 use crate::poller;
+use crate::poller::utils::should_insert_url_to_internet_archive_urls;
 use colorize::AnsiColor;
 use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool};
@@ -16,6 +20,10 @@ pub async fn insert_url_to_internet_archive_urls(url: &str, pool: &PgPool) -> Re
     .fetch_one(pool)
     .await
     .map(|result| result.id)
+}
+
+pub async fn check_before_inserting_url(url: &str, pool: &PgPool) -> Result<bool, Error> {
+    should_insert_url_to_internet_archive_urls(url, pool).await
 }
 
 /// This function takes in an `edit_data` `row_id`, extract the urls contained inside, then insert them into the `internet_archive_urls` table
@@ -84,8 +92,10 @@ pub async fn insert_edit_note_row_to_internet_archive_urls(
     Ok(!urls.is_empty())
 }
 
-pub async fn get_job_id_status(job_id: String, _pool: &PgPool) -> Result<&str, Error> {
-    // TODO: Concider using &str for job_id?
-    println!("job_id: {},", job_id);
-    Ok("")
+pub async fn get_job_id_status(
+    job_id: &str,
+    _pool: &PgPool,
+) -> Result<ArchivalStatusResponse, ArchivalError> {
+    let status = make_archival_status_request(job_id).await?;
+    Ok(status)
 }

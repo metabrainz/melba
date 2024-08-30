@@ -1,0 +1,14 @@
+retry_task:
+  retry_interval: 86400  # 60*60*24 seconds
+  select_limit: 10
+  allow_remove_row_after: 86400
+
+poller_task:
+  poll_interval: 10
+
+notify_task:
+  notify_interval: 10
+
+listen_task:
+  listen_interval: 5
+  sleep_status_interval: 120

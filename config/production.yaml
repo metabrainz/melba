@@ -1,0 +1,16 @@
+debug: false
+
+wayback_machine_api:
+  myaccesskey: "wayback-machine-access-key"
+  mysecret: "wayback-machine-secret"
+
+sentry:
+  url: "enter your project url"
+
+database:
+  pg_host: ""
+  pg_port: ""
+  pg_user: ""
+  pg_password: ""
+  pg_database: ""
+  database_url: ""

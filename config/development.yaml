@@ -9,7 +9,7 @@ retry_task:
   allow_remove_row_after: 600  # 10 min
 
 sentry:
-  url: "https://6b10fa28ca8b69492acdc2988707adc8@o4507836624470016.ingest.us.sentry.io/4507836627222528"
+  url: "enter sentry DSN here"
 
 database:
   pg_host: "localhost" # If running as a docker container, change this to musicbrainz-docker-db-1

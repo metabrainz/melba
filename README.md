@@ -12,11 +12,12 @@ MusicBrainz database sees a lot of edits made on a daily basis. With each edit, 
 
 ## Installation
 
-Prerequisites:
+Primary prerequisites:
 - Rust
 - Postgres
 - Docker
 - [musicbrainz-docker](https://github.com/metabrainz/musicbrainz-docker) local setup for musicbrainz database
+- yq 
 
 Follow the instructions in [INSTALL.md](docs/INSTALL.md)
 

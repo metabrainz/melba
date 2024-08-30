@@ -2,11 +2,11 @@
 
 > - Make sure musicbrainz db and the required database tables are present.
 > - Follow https://github.com/metabrainz/musicbrainz-docker to install the required containers and db dumps.
-> - Rename the `.env.example` to `.env`.
+> - Rename the `.env.example` to `.env`, to set the `RUN_MODE` to `development`.
+> - Ensure [yq](https://github.com/mikefarah/yq) is installed, for using configs in the sql scripts.
 > - After ensuring musicbrainz_db is running on port 5432, Run the script `init_db.sh` in scripts dir.
 > - In `config/development.toml` file, make sure to create a sentry rust project, enter your sentry project [DSN](https://docs.sentry.io/platforms/rust/#configure) (Data Source Name) in the `url` key's value.
 > - Get the Internet Archive API accesskey and secret from [here](https://archive.org/account/s3.php) (requires sign in). Paste them in `config/development.toml` file `[wayback_machine_api]`'s variables `myaccesskey` and `mysecret`.
-
 
 There are 2 methods to run the program:
 1. Build the project and run.

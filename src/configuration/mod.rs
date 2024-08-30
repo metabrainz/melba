@@ -44,7 +44,6 @@ pub struct Database {
     pub pg_user: String,
     pub pg_password: String,
     pub pg_database: String,
-    pub database_url: String,
 }
 
 #[derive(Debug, Deserialize)]

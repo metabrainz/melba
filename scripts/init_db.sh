@@ -1,7 +1,26 @@
 #!/bin/bash
 
-# Load environment variables from .env file
-export $(grep -v '^#' ../.env | xargs)
+# Check if yq is installed
+if ! command -v yq &> /dev/null; then
+    echo "Error: 'yq' is not installed. Please install 'yq' to run this script."
+    exit 1
+fi
+
+
+CONFIG_FILE="../config/development.yaml"
+
+PG_HOST=$(yq -r '.database.pg_host' "$CONFIG_FILE")
+PG_PORT=$(yq -r '.database.pg_port' "$CONFIG_FILE")
+PG_USER=$(yq -r '.database.pg_user' "$CONFIG_FILE")
+PG_PASSWORD=$(yq -r '.database.pg_password' "$CONFIG_FILE")
+PG_DATABASE=$(yq -r '.database.pg_database' "$CONFIG_FILE")
+DATABASE_URL=$(yq -r '.database.database_url' "$CONFIG_FILE")
+
+export PGHOST=$PG_HOST
+export PGPORT=$PG_PORT
+export PGUSER=$PG_USER
+export PGPASSWORD=$PG_PASSWORD
+export PGDATABASE=$PG_DATABASE
 
 sql_dir="sql"
 

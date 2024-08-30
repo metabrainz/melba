@@ -4,9 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-ARG PGHOST
-ENV PGHOST=${PGHOST}
-
 ENV RUSTFLAGS='-C target-feature=+crt-static'
 ENV SQLX_OFFLINE=true
 

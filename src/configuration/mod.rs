@@ -38,6 +38,16 @@ pub struct Sentry {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Database {
+    pub pg_host: String,
+    pub pg_port: String,
+    pub pg_user: String,
+    pub pg_password: String,
+    pub pg_database: String,
+    pub database_url: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Settings {
     pub wayback_machine_api: WaybackMachineApi,
     pub retry_task: RetryTask,
@@ -45,6 +55,7 @@ pub struct Settings {
     pub notify_task: NotifyTask,
     pub listen_task: ListenTask,
     pub sentry: Sentry,
+    pub database: Database,
 }
 
 impl Settings {

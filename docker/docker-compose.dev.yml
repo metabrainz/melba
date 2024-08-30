@@ -6,7 +6,6 @@ services:
       dockerfile: docker/Dockerfile.dev
     environment:
       - RUN_MODE=development
-      - PGHOST=musicbrainz-docker-db-1
       - APP_PUSH_GATEWAY=pushgateway:9091
     networks:
       - musicbrainz-docker_default

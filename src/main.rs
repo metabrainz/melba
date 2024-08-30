@@ -1,7 +1,5 @@
 use crate::configuration::Settings;
-use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
-use std::env;
 
 mod app;
 mod archival;
@@ -21,17 +19,19 @@ fn main() {
             ..Default::default()
         },
     ));
-    dotenv().ok();
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
         .block_on(async {
-            let hostname = env::var("PGHOST").expect("PGHOST env variable is not set");
-            //TODO: Check how to use Config with docker, and add Database config in config files
+            let hostname = settings.database.pg_host;
+            let user = settings.database.pg_user;
+            let password = settings.database.pg_password;
+            let port = settings.database.pg_port;
+            let db = settings.database.pg_database;
             let db_url = format!(
-                "postgres://musicbrainz:musicbrainz@{}:5432/musicbrainz_db",
-                hostname
+                "postgres://{}:{}@{}:{}/{}",
+                user, password, hostname, port, db
             );
             let pool = PgPoolOptions::new()
                 .max_connections(5)

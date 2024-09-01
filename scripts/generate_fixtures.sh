@@ -6,15 +6,14 @@ if ! command -v yq &> /dev/null; then
     exit 1
 fi
 
+CONFIG_FILE="../config/development.toml"
 
-CONFIG_FILE="../config/development.yaml"
-
-PG_HOST=$(yq -r '.database.pg_host' "$CONFIG_FILE")
-PG_PORT=$(yq -r '.database.pg_port' "$CONFIG_FILE")
-PG_USER=$(yq -r '.database.pg_user' "$CONFIG_FILE")
-PG_PASSWORD=$(yq -r '.database.pg_password' "$CONFIG_FILE")
-PG_DATABASE=$(yq -r '.database.pg_database' "$CONFIG_FILE")
-DATABASE_URL=$(yq -r '.database.database_url' "$CONFIG_FILE")
+PG_HOST=$(yq -p toml -r '.database.pg_host' "$CONFIG_FILE")
+PG_PORT=$(yq -p toml -r '.database.pg_port' "$CONFIG_FILE")
+PG_USER=$(yq -p toml -r '.database.pg_user' "$CONFIG_FILE")
+PG_PASSWORD=$(yq -p toml -r '.database.pg_password' "$CONFIG_FILE")
+PG_DATABASE=$(yq -p toml -r '.database.pg_database' "$CONFIG_FILE")
+DATABASE_URL=$(yq -p toml -r '.database.database_url' "$CONFIG_FILE")
 
 export PGHOST=$PG_HOST
 export PGPORT=$PG_PORT
@@ -25,7 +24,7 @@ export PGDATABASE=$PG_DATABASE
 # Get the project root directory using cargo
 project_root=$(cargo locate-project --workspace --message-format plain | xargs dirname)
 
-dump_dir="$project_root/tests1/fixtures"
+dump_dir="$project_root/tests/fixtures"
 mkdir -p "$dump_dir"
 
 tables=("external_url_archiver.internet_archive_urls" "external_url_archiver.last_unprocessed_rows" "musicbrainz.edit_data" "musicbrainz.edit_note" "musicbrainz.edit" "musicbrainz.editor")
@@ -33,7 +32,7 @@ tables=("external_url_archiver.internet_archive_urls" "external_url_archiver.las
 # Array to keep track of created backup tables
 backup_tables=()
 
-# Function to create, verify, dump a new table
+# Function to create, verify, and dump a new table
 dump_table() {
     local table="$1"
     local schema_name

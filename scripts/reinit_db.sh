@@ -6,15 +6,14 @@ if ! command -v yq &> /dev/null; then
     exit 1
 fi
 
+CONFIG_FILE="../config/development.toml"
 
-CONFIG_FILE="../config/development.yaml"
-
-PG_HOST=$(yq -r '.database.pg_host' "$CONFIG_FILE")
-PG_PORT=$(yq -r '.database.pg_port' "$CONFIG_FILE")
-PG_USER=$(yq -r '.database.pg_user' "$CONFIG_FILE")
-PG_PASSWORD=$(yq -r '.database.pg_password' "$CONFIG_FILE")
-PG_DATABASE=$(yq -r '.database.pg_database' "$CONFIG_FILE")
-DATABASE_URL=$(yq -r '.database.database_url' "$CONFIG_FILE")
+PG_HOST=$(yq -p toml -r '.database.pg_host' "$CONFIG_FILE")
+PG_PORT=$(yq -p toml -r '.database.pg_port' "$CONFIG_FILE")
+PG_USER=$(yq -p toml -r '.database.pg_user' "$CONFIG_FILE")
+PG_PASSWORD=$(yq -p toml -r '.database.pg_password' "$CONFIG_FILE")
+PG_DATABASE=$(yq -p toml -r '.database.pg_database' "$CONFIG_FILE")
+DATABASE_URL=$(yq -p toml -r '.database.database_url' "$CONFIG_FILE")
 
 export PGHOST=$PG_HOST
 export PGPORT=$PG_PORT

@@ -33,12 +33,11 @@ This is a high level overview of the folder structure of the project.
 ```
 
 
-## Current Implementation (WIP)
+## Current Implementation
 
 We want to get URLs from `edit_data` and `edit_note` tables, and archive them in Internet Archive history.
 The app provides multiple command line functionalities to archive URLs from `edit_data` and `edit_note` tables:
 ![CLI functionality](../assets/cli.png)
-
 We create a `external_url_archiver` schema, under which we create the required table, functions, trigger to make the service work.
 
 Following are the long-running tasks:
@@ -61,5 +60,12 @@ Following are the long-running tasks:
          - The listener task is delayed for currently 5 seconds, so that no matter how many URLs are passed to the channel, it only receives 1 URL per 5 seconds, in order to work under IA rate limits.
 3. `retry/cleanup task`
    - Runs every 24 hours, and does the following:
-     1. If the `status` of the URL archival is `success`, and the URL is present in the table for more than 24 hours, cleans it.
-     2. In case the URL's status is still null which means pending, it resends the URL to `archive_urls` channel from `notify_archive_urls` function, so that it can be re-archived.
+     1. If the `status` of the URL archival is `success` and the URL is present in the table for more than 24 hours, or if it is `failed`, the task will clean it. 
+     2. In case the URL's status is `error`, it resends the URL to `archive_urls` channel from `notify_archive_urls` function, so that it can be re-archived.
+
+- The status of each row in `internet_archive_urls` can have 5 values:
+  1. NotStarted
+  2. Processing
+  3. Success
+  4. StatusError
+  5. Failed

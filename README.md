@@ -17,7 +17,7 @@ Primary prerequisites:
 - Postgres
 - Docker
 - [musicbrainz-docker](https://github.com/metabrainz/musicbrainz-docker) local setup for musicbrainz database
-- yq 
+- yq (version >= 4.44.3)
 
 Follow the instructions in [INSTALL.md](docs/INSTALL.md)
 

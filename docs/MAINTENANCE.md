@@ -26,6 +26,12 @@ This doc provides instructions, guidelines and references to maintain the projec
 ## Schema Guidelines
 
 - Since the project depends on `musicbrainz_db`, therefore, make sure all the `CREATE TABLE musicbrainz.*` instructions, present in `scripts/sql` scripts are in sync with MusicBrainz database schema.
+- A few queries uses [compile-time semantic verifications](https://github.com/launchbadge/sqlx?tab=readme-ov-file#compile-time-verification). To make this work, we have `.sqlx` folder present which contains query metadata for such use case. These could change if the schema changes, so to keep things in sync:
+  1. Make sure [sqlx-cli](https://github.com/launchbadge/sqlx/blob/main/sqlx-cli/README.md) is installed.
+  2. Run `cargo sqlx prepare`.
+
+## Monitoring
+- While editing the grafana dashboard, make sure to update `grafana/dashboards/metrics-dashboard.json` file with the corresponding changes. 
 
 ## Resources
 

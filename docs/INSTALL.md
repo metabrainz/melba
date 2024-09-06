@@ -3,6 +3,7 @@
 > - Make sure musicbrainz db and the required database tables are present.
 > - Follow https://github.com/metabrainz/musicbrainz-docker to install the required containers and db dumps.
 > - Rename the `.env.example` to `.env`, to set the `RUN_MODE` to `development`.
+> - Rename `config/default.example.toml` to `config/default.toml`, `config/development.example.toml` to `config/development.toml` and `config/production.example.toml` to `config/production.toml`.
 > - Ensure [yq](https://github.com/mikefarah/yq) is installed, for using configs in the sql scripts.
 > - After ensuring musicbrainz_db is running on port 5432, Run the script `init_db.sh` in scripts dir.
 > - In `config/development.toml` file, make sure to create a sentry rust project, enter your sentry project [DSN](https://docs.sentry.io/platforms/rust/#configure) (Data Source Name) in the `url` key's value. Make sure to not forget this step, else the program will panic.

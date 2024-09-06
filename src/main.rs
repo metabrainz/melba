@@ -11,14 +11,23 @@ mod configuration;
 mod metrics;
 
 fn main() {
-    let settings = Settings::new().expect("Sentry Config not set");
-    let _guard = sentry::init((
-        settings.sentry.url,
-        sentry::ClientOptions {
-            release: sentry::release_name!(),
-            ..Default::default()
-        },
-    ));
+    let settings = Settings::new().expect("Failed to load settings");
+
+    let _guard = if !settings.sentry.url.trim().is_empty() {
+        println!("Initializing Sentry with DSN...");
+        Some(sentry::init((
+            settings.sentry.url.as_str(),
+            sentry::ClientOptions {
+                release: sentry::release_name!(),
+                ..Default::default()
+            },
+        )))
+    } else {
+        println!("Sentry DSN is not provided, skipping Sentry initialization.");
+        None
+    };
+
+    // Initialize the Tokio runtime
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -37,7 +46,7 @@ fn main() {
                 .max_connections(5)
                 .connect(&db_url)
                 .await
-                .unwrap();
+                .expect("Failed to connect to the database");
 
             cli::start(&pool).await;
         });

@@ -50,6 +50,11 @@ jobs:
             sleep 1
           done
 
+      - name: Copy example config files
+        run: cp config/development.example.toml config/development.toml &&
+             cp config/default.example.toml config/default.toml
+
+
       - name: Populate Test Data
         env:
           PGPASSWORD: musicbrainz

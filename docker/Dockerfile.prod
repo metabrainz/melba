@@ -15,5 +15,8 @@ WORKDIR /app
 COPY --from=builder /mb-ia ./app
 
 COPY --from=builder /app/config /app/config
+
+ENV RUN_MODE=production
+
 CMD ["/app/app"]
 

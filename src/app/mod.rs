@@ -47,6 +47,7 @@ pub async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
 
     tokio::spawn(async move {
         if let Err(e) = poller.poll().await {
+            eprintln!("Cannot poll edit data and edit notes, due to: {}", e);
             sentry::capture_message(
                 format!("Cannot poll edit data and edit notes, due to: {}", e).as_str(),
                 sentry::Level::Warning,

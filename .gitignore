@@ -3,3 +3,4 @@
 .env
 config/production.toml
 config/development.toml
+config/default.toml

@@ -6,7 +6,9 @@ if ! command -v yq &> /dev/null; then
     exit 1
 fi
 
-CONFIG_FILE="../config/development.toml"
+export $(grep -v '^#' ../.env | xargs)
+
+CONFIG_FILE="../config/${RUN_MODE}.toml"
 
 PG_HOST=$(yq -p toml -r '.database.pg_host' "$CONFIG_FILE")
 PG_PORT=$(yq -p toml -r '.database.pg_port' "$CONFIG_FILE")

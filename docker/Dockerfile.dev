@@ -14,7 +14,6 @@ WORKDIR /app
 COPY . .
 
 ENV RUSTFLAGS='-C target-feature=+crt-static'
-ENV SQLX_OFFLINE=true
 
 # Build the project in debug mode and place the binary in /app
 RUN --mount=type=cache,target=/usr/local/cargo/registry \

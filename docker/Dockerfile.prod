@@ -1,22 +1,18 @@
-FROM rust:latest AS builder
+FROM metabrainz/base-image:latest
+
+RUN apt-get update && \
+    apt-get install --no-install-suggests --no-install-recommends -y \
+        rustc cargo build-essential unzip curl wget iputils-ping pkg-config libssl-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+ENV RUN_MODE=production
 
 WORKDIR /app
 
 COPY . .
 
-ENV RUSTFLAGS='-C target-feature=+crt-static'
-ENV SQLX_OFFLINE=true
-
 RUN cargo build --release --target x86_64-unknown-linux-gnu && \
-    cp ./target/x86_64-unknown-linux-gnu/release/mb-ia /mb-ia
-FROM scratch
+    cp ./target/x86_64-unknown-linux-gnu/release/mb-ia /app/mb-ia
 
-WORKDIR /app
-COPY --from=builder /mb-ia ./app
-
-COPY --from=builder /app/config /app/config
-
-ENV RUN_MODE=production
-
-CMD ["/app/app"]
-
+CMD ["/app/mb-ia"]

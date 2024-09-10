@@ -5,21 +5,28 @@ use crate::poller;
 use crate::poller::utils::should_insert_url_to_internet_archive_urls;
 use colorize::AnsiColor;
 use mb_rs::schema::{EditData, EditNote};
-use sqlx::{Error, PgPool};
+use sqlx::{Error, PgPool, Row};
 
 //TODO: Currently I am returning the internet_archive_urls row id when I insert any URL. Now there might be URLs which are already saved, hence instead of row id, show how many URLs are still there unprocessed, and is before the currently inserted one.
-pub async fn insert_url_to_internet_archive_urls(url: &str, pool: &PgPool) -> Result<i32, Error> {
-    sqlx::query!(
+pub async fn insert_url_to_internet_archive_urls(
+    url: &str,
+    pool: &PgPool,
+) -> Result<i32, sqlx::Error> {
+    let row = sqlx::query(
         r#"
         INSERT INTO external_url_archiver.internet_archive_urls (url, retry_count)
         VALUES ($1, 0)
         RETURNING id
-    "#,
-        url
+        "#,
     )
+    .bind(url)
     .fetch_one(pool)
-    .await
-    .map(|result| result.id)
+    .await?;
+
+    // Get the id from the returned row
+    let id: i32 = row.try_get("id")?;
+
+    Ok(id)
 }
 
 pub async fn check_before_inserting_url(url: &str, pool: &PgPool) -> Result<bool, Error> {
@@ -43,17 +50,19 @@ pub async fn insert_edit_data_row_to_internet_archive_urls(
 
     let urls = poller::utils::extract_url_from_edit_data(&edit_data_row, pool).await;
     for url in &urls {
-        let id = sqlx::query!(
-        r#"
+        let row = sqlx::query(
+            r#"
             INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
             VALUES ($1, 'edit_data', $2, 0)
             RETURNING id
-        "#,
-            url,
-            edit_data_row.edit
-        ).fetch_one(pool)
-            .await?
-            .id;
+        "#
+        )
+            .bind(url)
+            .bind(edit_data_row.edit)
+            .fetch_one(pool)
+            .await?;
+        let id: i32 = row.try_get("id")?;
+
         println!("{} {} {}", "URL enqueued and id: ".green(), url, id);
     }
     Ok(!urls.is_empty())
@@ -76,17 +85,19 @@ pub async fn insert_edit_note_row_to_internet_archive_urls(
 
     let urls = poller::utils::extract_urls_from_text(&edit_note_row.text);
     for url in &urls {
-        let id = sqlx::query!(
-        r#"
+        let row = sqlx::query(
+            r#"
             INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
             VALUES ($1, 'edit_note', $2, 0)
             RETURNING id
-        "#,
-            url,
-            edit_note_row.edit
-        ).fetch_one(pool)
-            .await?
-            .id;
+        "#
+        )
+            .bind(url)
+            .bind(edit_note_row.edit)
+            .fetch_one(pool)
+            .await?;
+
+        let id: i32 = row.try_get("id")?;
         println!("{} {} {}", "URL enqueued and id: ".green(), url, id);
     }
     Ok(!urls.is_empty())

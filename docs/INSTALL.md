@@ -6,7 +6,7 @@
 > - Rename `config/default.example.toml` to `config/default.toml`, `config/development.example.toml` to `config/development.toml` and `config/production.example.toml` to `config/production.toml`.
 > - Ensure [yq](https://github.com/mikefarah/yq) is installed, for using configs in the sql scripts.
 > - After ensuring musicbrainz_db is running on port 5432, Run the script `init_db.sh` in scripts dir.
-> - In `config/development.toml` file, make sure to create a sentry rust project, enter your sentry project [DSN](https://docs.sentry.io/platforms/rust/#configure) (Data Source Name) in the `url` key's value. Make sure to not forget this step, else the program will panic.
+> - In `config/development.toml` file, create a sentry rust project, enter your sentry project [DSN](https://docs.sentry.io/platforms/rust/#configure) (Data Source Name) in the `url` key's value.
 > - Get the Internet Archive API accesskey and secret from [here](https://archive.org/account/s3.php) (requires sign in). Paste them in `config/development.toml` file `[wayback_machine_api]`'s variables `myaccesskey` and `mysecret`.
 
 There are 2 methods to run the program:
@@ -18,11 +18,7 @@ There are 2 methods to run the program:
         ```
 2. Use the Dockerfile
     - Note that the container has to run in the same network as musicbrainz db network bridge.
-    1.  ```shell
-        cargo sqlx prepare
-        ```
-
-    2. ```shell
+       ```shell
        docker-compose -f docker/docker-compose.dev.yml up --build
        ```
 

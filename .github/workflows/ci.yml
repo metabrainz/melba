@@ -51,8 +51,7 @@ jobs:
           done
 
       - name: Copy example config files
-        run: cp config/development.example.toml config/development.toml &&
-             cp config/default.example.toml config/default.toml
+        run: cp config/development.example.toml config/development.toml
 
 
       - name: Populate Test Data

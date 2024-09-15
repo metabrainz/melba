@@ -2,8 +2,12 @@ FROM ubuntu:latest
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y curl build-essential libssl-dev pkg-config \
+    apt-get install -y curl wget build-essential libssl-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
+
+RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq &&\
+        chmod +x /usr/bin/yq
+
 
 # Install Rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y

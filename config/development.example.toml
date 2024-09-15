@@ -13,7 +13,7 @@ url = "your sentry DSN here"
 
 [database]
 pg_host = "localhost" # If running as a docker container, change this to musicbrainz-docker-db-1
-pg_port = "5432"
+pg_port = 5432
 pg_user =  "musicbrainz"
 pg_password = "musicbrainz"
 pg_database =  "musicbrainz_db"

@@ -40,7 +40,7 @@ pub struct Sentry {
 #[derive(Debug, Deserialize)]
 pub struct Database {
     pub pg_host: String,
-    pub pg_port: String,
+    pub pg_port: u16,
     pub pg_user: String,
     pub pg_password: String,
     pub pg_database: String,

@@ -1,5 +1,5 @@
 use crate::configuration::Settings;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 mod app;
 mod archival;
@@ -38,13 +38,18 @@ fn main() {
             let password = settings.database.pg_password;
             let port = settings.database.pg_port;
             let db = settings.database.pg_database;
-            let db_url = format!(
-                "postgres://{}:{}@{}:{}/{}",
-                user, password, hostname, port, db
-            );
+
+            let connect_options = PgConnectOptions::new()
+                .host(&hostname)
+                .port(port)
+                .username(&user)
+                .password(&password)
+                .database(&db)
+                .statement_cache_capacity(0);
+
             let pool = PgPoolOptions::new()
                 .max_connections(5)
-                .connect(&db_url)
+                .connect_with(connect_options)
                 .await
                 .expect("Failed to connect to the database");
 

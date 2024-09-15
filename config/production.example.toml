@@ -9,7 +9,7 @@ url = "enter your project url"
 
 [database]
 pg_host = ""
-pg_port = ""
+pg_port = 5432
 pg_user = ""
 pg_password = ""
 pg_database = ""

@@ -49,9 +49,7 @@ fn main() {
 
             let pool = PgPoolOptions::new()
                 .max_connections(5)
-                .connect_with(connect_options)
-                .await
-                .expect("Failed to connect to the database");
+                .connect_lazy_with(connect_options);
 
             cli::start(&pool).await;
         });

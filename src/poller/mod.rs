@@ -1,3 +1,4 @@
+pub mod edit_types;
 pub mod looper;
 pub mod utils;
 

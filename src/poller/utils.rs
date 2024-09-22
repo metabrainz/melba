@@ -1,3 +1,4 @@
+use crate::poller::edit_types::remove_relationship::RemoveRelationship;
 use crate::structs::last_unprocessed_row::LastUnprocessedRow;
 use linkify::{LinkFinder, LinkKind};
 use mb_rs::schema::{EditData, EditNote};
@@ -58,11 +59,34 @@ pub fn extract_urls_from_json(json: &JsonValue, edit_type: i16) -> Vec<String> {
         91 => extract_url_from_edit_relationship(json)
             .map(|url| vec![url])
             .unwrap_or_default(),
+        92 => extract_url_from_remove_relationship(json)
+            .map(|url| vec![url])
+            .unwrap_or_default(),
         101 => extract_url_from_edit_url(json)
             .map(|url| vec![url])
             .unwrap_or_default(),
         _ => extract_url_from_any_annotation(json).unwrap_or_default(),
     }
+}
+
+fn extract_url_from_remove_relationship(json: &JsonValue) -> Option<String> {
+    let remove_relationship_option: Option<RemoveRelationship> =
+        serde_json::from_value(json.clone()).ok();
+
+    if let Some(remove_relationship) = remove_relationship_option {
+        if let Some(relationship) = remove_relationship.relationship {
+            if let Some(link) = relationship.link {
+                if let Some(type_field) = link.type_field {
+                    if type_field.entity0_type == Some("url".to_string()) {
+                        return relationship.entity0.and_then(|e| e.name);
+                    } else if type_field.entity1_type == Some("url".to_string()) {
+                        return relationship.entity1.and_then(|e| e.name);
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 fn extract_url_from_add_relationship(json: &JsonValue) -> Option<String> {

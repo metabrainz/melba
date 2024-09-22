@@ -234,6 +234,141 @@ fn test_edit_relationship_url() {
 }
 
 #[test]
+fn test_remove_relationship_extract_url_from_entity0() {
+    let test_json = json!({
+        "edit_version": 2,
+        "relationship": {
+            "entity0": {
+                "gid": "3c4092d7-0b4b-4cc1-8098-eb2ebb43a1ca",
+                "id": 1391533,
+                "name": "https://www.example.com"
+            },
+            "entity0_credit": "Hurricane Smith",
+            "entity1": {
+                "gid": "5dc2fe85-2fd6-4f30-b4c9-e6029735956c",
+                "id": 4061804,
+                "name": "Not a URL"
+            },
+            "id": 1519970,
+            "link": {
+                "attributes": [],
+                "begin_date": {
+                    "day": null,
+                    "month": null,
+                    "year": null
+                },
+                "end_date": {
+                    "day": null,
+                    "month": null,
+                    "year": null
+                },
+                "ended": 0,
+                "type": {
+                    "entity0_type": "url",
+                    "entity1_type": "artist",
+                    "id": 283,
+                    "long_link_phrase": "has a page at"
+                }
+            }
+        }
+    });
+
+    let result = extract_url_from_remove_relationship(&test_json);
+    assert_eq!(result, Some("https://www.example.com".to_string()));
+}
+
+#[test]
+fn test_remove_relationship_extract_url_from_entity1() {
+    let test_json = json!({
+        "edit_version": 2,
+        "relationship": {
+            "entity0": {
+                "gid": "3c4092d7-0b4b-4cc1-8098-eb2ebb43a1ca",
+                "id": 1391533,
+                "name": "Not a URL"
+            },
+            "entity0_credit": "Hurricane Smith",
+            "entity1": {
+                "gid": "5dc2fe85-2fd6-4f30-b4c9-e6029735956c",
+                "id": 4061804,
+                "name": "https://www.allmusic.com/artist/mn0001007298"
+            },
+            "id": 1519970,
+            "link": {
+                "attributes": [],
+                "begin_date": {
+                    "day": null,
+                    "month": null,
+                    "year": null
+                },
+                "end_date": {
+                    "day": null,
+                    "month": null,
+                    "year": null
+                },
+                "ended": 0,
+                "type": {
+                    "entity0_type": "artist",
+                    "entity1_type": "url",
+                    "id": 283,
+                    "long_link_phrase": "has an Allmusic page at"
+                }
+            }
+        }
+    });
+
+    let result = extract_url_from_remove_relationship(&test_json);
+    assert_eq!(
+        result,
+        Some("https://www.allmusic.com/artist/mn0001007298".to_string())
+    );
+}
+
+#[test]
+fn test_remove_relationship_no_url() {
+    let test_json = json!({
+        "edit_version": 2,
+        "relationship": {
+            "entity0": {
+                "gid": "3c4092d7-0b4b-4cc1-8098-eb2ebb43a1ca",
+                "id": 1391533,
+                "name": "Not a URL"
+            },
+            "entity0_credit": "Hurricane Smith",
+            "entity1": {
+                "gid": "5dc2fe85-2fd6-4f30-b4c9-e6029735956c",
+                "id": 4061804,
+                "name": "Not a URL either"
+            },
+            "id": 1519970,
+            "link": {
+                "attributes": [],
+                "begin_date": {
+                    "day": null,
+                    "month": null,
+                    "year": null
+                },
+                "end_date": {
+                    "day": null,
+                    "month": null,
+                    "year": null
+                },
+                "ended": 0,
+                "type": {
+                    "entity0_type": "artist",
+                    "entity1_type": "artist",
+                    "id": 283,
+                    "long_link_phrase": "has a page at"
+                }
+            }
+        }
+    });
+
+    let result = extract_url_from_remove_relationship(&test_json);
+    assert_eq!(result, None);
+}
+
+#[test]
 fn test_any_annotations() {
     let series_annotation = json!({
        "annotation_id" : 1272483,

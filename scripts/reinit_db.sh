@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "${BASH_SOURCE[0]}")/"
+
 RUN_MODE=${RUN_MODE:-development}
 
 # Check if yq is installed

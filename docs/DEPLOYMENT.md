@@ -1,0 +1,4 @@
+# DEPLOYMENT GUIDELINES
+- All the production configs need to be added in `config/production.toml` (See `config/production.example.toml`).
+- One can override all the default configs present in `config/default.toml` by adding them directly in `config/production.toml`.
+- The project relies heavily on [LISTEN/NOTIFY](https://www.postgresql.org/docs/current/sql-notify.html) and [prepared statements](https://docs.rs/sqlx/latest/sqlx/fn.query.html) to be working. Unfortunately, these features do not work with PgBouncer + Transaction pooling [[here](https://github.com/pgbouncer/pgbouncer/issues/655)]. Therefore, we cannot run the app with PgBouncer.

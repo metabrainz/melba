@@ -29,3 +29,6 @@ For understanding how the project is structured, check [here](docs/ARCHITECTURE.
 
 Refer to [Maintenance guide](docs/MAINTENANCE.md) for guidelines and instructions for maintaining the project.
 
+## Deployment
+Checkout [Deployment Guidelines](docs/DEPLOYMENT.md) for deployment related information.
+

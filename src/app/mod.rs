@@ -1,6 +1,6 @@
 use crate::archival;
 use crate::archival::notifier::Notifier;
-use crate::configuration::Settings;
+use crate::configuration::SETTINGS;
 use crate::poller::Poller;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -40,16 +40,15 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
 ///
 /// ⚠️ This must be awaited twice. Once to get the `JoinHandle`, and a second to start the task
 pub async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
-    let settings = Settings::new().expect("Config settings are not configured properly");
-    let mut poller = Poller::new(settings.poller_task.poll_interval, db_pool.clone())
+    let mut poller = Poller::new(SETTINGS.poller_task.poll_interval, db_pool.clone())
         .await
-        .expect("Could not find rows in edit rows to start poller");
+        .expect("[POLLER] Could not find rows in edit rows to start poller");
 
     tokio::spawn(async move {
         if let Err(e) = poller.poll().await {
-            eprintln!("Cannot poll edit data and edit notes, due to: {}", e);
+            eprintln!("[POLLER] Task Failed, Error: {}", e);
             sentry::capture_message(
-                format!("Cannot poll edit data and edit notes, due to: {}", e).as_str(),
+                format!("[POLLER] Task Failed, Error: {}", e).as_str(),
                 sentry::Level::Warning,
             );
         }
@@ -60,12 +59,11 @@ pub async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
 ///
 /// ⚠️ This must be awaited twice. Once to get the `JoinHandle`, and a second to start the task
 async fn spawn_notification_task(db_pool: PgPool) -> JoinHandle<()> {
-    let settings = Settings::new().expect("Config settings are not configured properly");
     let notifier = Arc::new(Mutex::new(Notifier::new(db_pool.clone()).await));
 
     tokio::spawn(async move {
         let mut interval =
-            tokio::time::interval(Duration::from_secs(settings.notify_task.notify_interval));
+            tokio::time::interval(Duration::from_secs(SETTINGS.notify_task.notify_interval));
 
         while !db_pool.is_closed() {
             interval.tick().await;
@@ -73,10 +71,8 @@ async fn spawn_notification_task(db_pool: PgPool) -> JoinHandle<()> {
             let mut notifier = notifier.lock().await;
 
             if notifier.should_notify().await {
-                println!("Notifying");
-
                 if let Err(e) = notifier.notify().await {
-                    eprintln!("Notify failed, error: {}", e);
+                    eprintln!("[NOTIFIER] Task Failed, Error: {}", e);
                     sentry::capture_error(&e);
                 };
             }
@@ -93,7 +89,7 @@ async fn spawn_archiver_task(db_pool: PgPool) -> JoinHandle<()> {
             .await
             .unwrap_or_else(|e| {
                 sentry::capture_error(&e);
-                eprintln!("Listener Task Error {}", e)
+                eprintln!("[LISTENER] Task Failed, Error {}", e)
             })
     })
 }
@@ -102,24 +98,23 @@ async fn spawn_archiver_task(db_pool: PgPool) -> JoinHandle<()> {
 ///
 /// ⚠️ This must be awaited twice. Once to get the `JoinHandle`, and a second to start the task
 async fn spawn_retry_and_cleanup_task(db_pool: PgPool) -> JoinHandle<()> {
-    let settings = Settings::new().expect("Config settings are not configured properly");
     tokio::spawn(async move {
         let mut interval =
-            tokio::time::interval(Duration::from_secs(settings.retry_task.retry_interval));
+            tokio::time::interval(Duration::from_secs(SETTINGS.retry_task.retry_interval));
         while !db_pool.is_closed() {
             interval.tick().await;
-            sentry::capture_message("Retry and Cleanup Task started", sentry::Level::Info);
+            sentry::capture_message("[RETRY_AND_CLEANUP] Task started", sentry::Level::Info);
             let archival_retry_task = archival::retry::start(db_pool.clone()).await;
             match archival_retry_task {
                 Ok(_) => {
                     sentry::capture_message(
-                        "Retry and Cleanup Task Completed",
+                        "[RETRY_AND_CLEANUP] Task Completed",
                         sentry::Level::Info,
                     );
                 }
                 Err(e) => {
                     sentry::capture_error(&e);
-                    eprintln!("Retry and Cleanup Task failed, error: {}", e)
+                    eprintln!("[RETRY_AND_CLEANUP] Task Failed, Error: {}", e)
                 }
             }
         }

@@ -1,4 +1,5 @@
 use crate::archival::utils::{get_first_id_to_start_notifier_from, is_row_exists};
+use crate::debug_println;
 use sqlx::{Error, PgPool};
 
 pub struct Notifier {
@@ -10,7 +11,7 @@ impl Notifier {
     pub async fn new(pool: PgPool) -> Notifier {
         let start_notifier_from = get_first_id_to_start_notifier_from(pool.clone()).await;
         if start_notifier_from.is_some() {
-            println!("Notifies starts from : {}", start_notifier_from.unwrap());
+            debug_println!("[NOTIFIER] starts from : {}", start_notifier_from.unwrap());
         }
         Notifier {
             start_notifier_from,
@@ -27,8 +28,8 @@ impl Notifier {
                 .bind(self.start_notifier_from)
                 .execute(&pool)
                 .await?;
-            println!(
-                "[start_id from notify], {}",
+            debug_println!(
+                "[NOTIFIER] start notifier from internet_archive_urls id, {}",
                 self.start_notifier_from.unwrap()
             );
 
@@ -39,7 +40,7 @@ impl Notifier {
             Ok(())
         } else {
             //Case: It could be that there is no URL in InternetArchiveURL table when we call `notify`, so we check for the id here, to start notifier from it in the next notify call
-            println!("[NOTIFIER] No row detected, checking again");
+            debug_println!("[NOTIFIER] No row detected to archive, checking again");
             self.start_notifier_from = get_first_id_to_start_notifier_from(self.pool.clone()).await;
             Ok(())
         }

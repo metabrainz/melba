@@ -1,7 +1,13 @@
+mod macros;
+
 use config::{Config, ConfigError, File};
 use dotenv::dotenv;
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::env;
+
+pub static SETTINGS: Lazy<Settings> =
+    Lazy::new(|| Settings::new().expect("Failed to load settings"));
 
 #[derive(Debug, Deserialize)]
 pub struct WaybackMachineApi {
@@ -55,6 +61,7 @@ pub struct Settings {
     pub listen_task: ListenTask,
     pub sentry: Sentry,
     pub database: Database,
+    pub debug: bool,
 }
 
 impl Settings {

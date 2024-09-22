@@ -1,3 +1,4 @@
+use crate::debug_println;
 use crate::metrics::Metrics;
 use crate::poller::utils::{
     extract_url_from_edit_data, extract_url_from_edit_note, save_url_to_internet_archive_urls,
@@ -16,9 +17,10 @@ pub async fn poll_db(
     edit_data_start_idx: i32,
     edit_note_start_idx: i32,
 ) -> Result<(Option<i32>, Option<i32>), Error> {
-    println!(
-        "EditNote: {}, EditData: {}",
-        edit_note_start_idx, edit_data_start_idx
+    debug_println!(
+        "[POLLER] Starting Polling from EditNote: {}, EditData: {}",
+        edit_note_start_idx,
+        edit_data_start_idx
     );
     let metrics = Metrics::new().await;
     let edits = sqlx::query_as::<_, EditData>(
@@ -49,26 +51,29 @@ pub async fn poll_db(
     .fetch_all(pool)
     .await?;
 
-    println!("Edits ->");
     for edit in &edits {
         let urls = extract_url_from_edit_data(edit, pool).await;
         for url in urls {
             save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool)
                 .await
-                .unwrap_or_else(|e| eprintln!("Error saving URL from edit: {}: {}", edit.edit, e));
-            println!("{}", url);
+                .unwrap_or_else(|e| {
+                    eprintln!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
+                });
+            debug_println!("[POLLER] Edit Data URL: {}", url);
         }
     }
-    println!("Edit Notes ->");
     for note in &notes {
         let urls = extract_url_from_edit_note(note, pool).await;
         for url in urls {
             save_url_to_internet_archive_urls(url.as_str(), "edit_note", note.id, pool)
                 .await
                 .unwrap_or_else(|e| {
-                    eprintln!("Error saving URL from edit note: {}: {}", note.id, e)
+                    eprintln!(
+                        "[POLLER] Error saving URL from edit note: {}: {}",
+                        note.id, e
+                    )
                 });
-            println!("{}", url);
+            debug_println!("[POLLER] Edit Note URL: {}", url);
         }
     }
     metrics.db_poll_counter.inc();

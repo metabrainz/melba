@@ -4,7 +4,8 @@ use crate::archival::utils::{
 };
 
 use crate::archival::error::ArchivalError;
-use crate::configuration::Settings;
+use crate::configuration::SETTINGS;
+use crate::debug_println;
 use crate::metrics::Metrics;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sentry::Level::Error;
@@ -15,14 +16,15 @@ use tokio::time;
 
 /// Listens to the `archive_urls` postgres channel
 pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
-    let settings = Settings::new().expect("Config settings not configured properly");
-
     let mut listener = PgListener::connect_with(&pool).await?;
     listener.listen("archive_urls").await?;
     loop {
         while let Some(notification) = listener.try_recv().await? {
-            time::sleep(Duration::from_secs(settings.listen_task.listen_interval)).await;
-            println!("Notification Payload: {}", notification.payload());
+            time::sleep(Duration::from_secs(SETTINGS.listen_task.listen_interval)).await;
+            debug_println!(
+                "[LISTENER] Notification Payload: {}",
+                notification.payload()
+            );
             let payload: InternetArchiveUrls = serde_json::from_str(notification.payload())?;
             handle_payload(payload, &pool).await?
         }
@@ -52,7 +54,7 @@ pub async fn handle_payload(
         } else {
             let archival_result = archive(url, url_row.id, pool).await;
             if let Err(e) = archival_result {
-                eprintln!("Archival Error : {}", e);
+                eprintln!("[LISTENER] Archival Error for id {}: {}", url_row.id, e);
                 set_status_with_message(
                     pool,
                     id,
@@ -79,7 +81,7 @@ pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), Archival
             inc_archive_request_retry_count(&status_pool, id)
                 .await
                 .unwrap_or_else(|e| {
-                    eprintln!("Could not increment archive request retry count");
+                    eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}", id);
                     sentry::capture_error(&e);
                 });
             set_status_with_message(
@@ -90,7 +92,7 @@ pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), Archival
             )
             .await
             .unwrap_or_else(|e| {
-                eprintln!("Could not increment archive request retry count");
+                eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}", id);
                 sentry::capture_error(&e);
             });
             sentry::capture_error(&e);

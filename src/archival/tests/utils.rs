@@ -1,5 +1,5 @@
 use super::*;
-use crate::configuration::Settings;
+use crate::configuration::SETTINGS;
 use sqlx::Error;
 
 #[sqlx::test(fixtures(
@@ -37,11 +37,10 @@ async fn test_make_archival_network_request() -> Result<(), ArchivalError> {
         ..Default::default()
     };
     let mut server = mockito::Server::new_with_opts_async(opts).await;
-    let settings = Settings::new().expect("Config settings are not configured properly");
     let mock = server
         .mock("POST", "/save")
         .match_header("Accept", "application/json")
-        .match_header("Authorization", format!("LOW {}:{}", settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret).as_str())
+        .match_header("Authorization", format!("LOW {}:{}", SETTINGS.wayback_machine_api.myaccesskey, SETTINGS.wayback_machine_api.mysecret).as_str())
         .match_header("Content-Type", "application/x-www-form-urlencoded")
         .match_body(format!("url={}", testing_url_invalid).as_str())
         .with_body(r#"{"message":"www.example.om URL syntax is not valid.","status":"error","status_ext":"error:invalid-url-syntax"}"#)
@@ -55,7 +54,7 @@ async fn test_make_archival_network_request() -> Result<(), ArchivalError> {
             "Authorization",
             format!(
                 "LOW {}:{}",
-                settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+                SETTINGS.wayback_machine_api.myaccesskey, SETTINGS.wayback_machine_api.mysecret
             )
             .as_str(),
         )
@@ -71,7 +70,7 @@ async fn test_make_archival_network_request() -> Result<(), ArchivalError> {
             "Authorization",
             format!(
                 "LOW {}:{}",
-                settings.wayback_machine_api.myaccesskey, settings.wayback_machine_api.mysecret
+                SETTINGS.wayback_machine_api.myaccesskey, SETTINGS.wayback_machine_api.mysecret
             )
             .as_str(),
         )

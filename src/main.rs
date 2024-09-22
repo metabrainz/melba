@@ -1,4 +1,4 @@
-use crate::configuration::Settings;
+use crate::configuration::SETTINGS;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 mod app;
@@ -11,12 +11,10 @@ mod configuration;
 mod metrics;
 
 fn main() {
-    let settings = Settings::new().expect("Failed to load settings");
-
-    let _guard = if !settings.sentry.url.trim().is_empty() {
+    let _guard = if !SETTINGS.sentry.url.trim().is_empty() {
         println!("Initializing Sentry with DSN...");
         Some(sentry::init((
-            settings.sentry.url.as_str(),
+            SETTINGS.sentry.url.as_str(),
             sentry::ClientOptions {
                 release: sentry::release_name!(),
                 ..Default::default()
@@ -33,18 +31,18 @@ fn main() {
         .build()
         .unwrap()
         .block_on(async {
-            let hostname = settings.database.pg_host;
-            let user = settings.database.pg_user;
-            let password = settings.database.pg_password;
-            let port = settings.database.pg_port;
-            let db = settings.database.pg_database;
+            let hostname = &SETTINGS.database.pg_host;
+            let user = &SETTINGS.database.pg_user;
+            let password = &SETTINGS.database.pg_password;
+            let port = SETTINGS.database.pg_port;
+            let db = &SETTINGS.database.pg_database;
 
             let connect_options = PgConnectOptions::new()
-                .host(&hostname)
+                .host(hostname)
                 .port(port)
-                .username(&user)
-                .password(&password)
-                .database(&db)
+                .username(user)
+                .password(password)
+                .database(db)
                 .statement_cache_capacity(0);
 
             let pool = PgPoolOptions::new()

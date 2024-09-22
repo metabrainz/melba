@@ -5,7 +5,8 @@ use crate::archival::archival_response::{
 use crate::archival::client::REQWEST_CLIENT;
 use crate::archival::error::ArchivalError;
 use crate::archival::error::ArchivalError::SaveRequestError;
-use crate::configuration::Settings;
+use crate::configuration::SETTINGS;
+use crate::debug_println;
 use crate::metrics::Metrics;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use sqlx::{Error, PgPool};
@@ -80,7 +81,11 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
     match is_row_exists_res {
         Ok(_) => true,
         Err(error) => {
-            println!("Cannot notify: {:?}", error);
+            debug_println!(
+                "[NOTIFIER] Cannot notify internet_archive_urls id: {}. Reason: {:?}",
+                row_id,
+                error
+            );
             false
         }
     }
@@ -138,12 +143,14 @@ pub async fn schedule_status_check(
     let metrics = Metrics::new().await;
     metrics.network_request_counter.inc();
     metrics.push_metrics().await;
-    let settings = Settings::new().expect("Config settings are not configured properly");
-    println!("{}", job_id);
+    debug_println!(
+        "[LISTENER] STATUS CHECK: Attempting status check for job_id {}",
+        job_id
+    );
     set_status_with_message(pool, id, ArchivalStatus::Processing as i32, "Processing").await?;
     for attempt in 1..=3 {
         time::sleep(Duration::from_secs(
-            settings.listen_task.sleep_status_interval,
+            SETTINGS.listen_task.sleep_status_interval,
         ))
         .await;
         let archival_status_response = make_archival_status_request(job_id.as_str()).await?;
@@ -156,11 +163,15 @@ pub async fn schedule_status_check(
             )
             .await?;
             metrics.record_archival_status("success").await;
+            debug_println!(
+                "[LISTENER] STATUS CHECK: job_id {} archived successfully",
+                job_id
+            );
             return Ok(());
         } else {
             if attempt == 3 {
                 let status = archival_status_response.status;
-                eprintln!("Error making final status check request: {:?}", &status);
+                eprintln!("[LISTENER] STATUS CHECK: Error making final status check request for job_id {}: {:?}", job_id,  &status);
                 inc_archive_request_retry_count(pool, id).await?;
                 set_status_with_message(
                     pool,
@@ -171,7 +182,10 @@ pub async fn schedule_status_check(
                 .await?;
             }
             metrics.record_archival_status("error").await;
-            eprintln!("Could not archive: {} attempt", attempt)
+            eprintln!(
+                "[LISTENER] STATUS CHECK: Could not archive job_id {}: {} attempt",
+                job_id, attempt
+            )
         }
     }
     Ok(())

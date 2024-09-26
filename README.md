@@ -1,6 +1,6 @@
-# <div style="text-align: center;">MusicBrainz - External URLs - Internet Archive Service</div>
+# <div style="text-align: center;">Melba</div>
 
-**<div style="text-align: center;">MusicBrainz - Internet Archive integration for preserving external URLs.</div>**
+**<div style="text-align: center;">Musicbrainz External Link wayBack Archiver</div>**
 
 -[Proposal Doc Link](https://docs.google.com/document/d/1Bk66_HFWEA6gBbFfQzIriGGgxxbEIwN1CbVDcz7FTys/edit?usp=sharing)
 

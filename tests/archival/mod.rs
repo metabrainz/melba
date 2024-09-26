@@ -1,8 +1,8 @@
-use mb_exurl_ia_service::archival;
-use mb_exurl_ia_service::archival::error::ArchivalError;
-use mb_exurl_ia_service::archival::listener::handle_payload;
-use mb_exurl_ia_service::archival::notifier::Notifier;
-use mb_exurl_ia_service::structs::internet_archive_urls::InternetArchiveUrls;
+use melba::archival;
+use melba::archival::error::ArchivalError;
+use melba::archival::listener::handle_payload;
+use melba::archival::notifier::Notifier;
+use melba::structs::internet_archive_urls::InternetArchiveUrls;
 use sqlx::postgres::PgListener;
 use sqlx::{Error, PgPool};
 use std::sync::Arc;

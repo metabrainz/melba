@@ -59,7 +59,7 @@ impl Metrics {
         let registry = self.registry.clone();
         spawn_blocking(move || {
             push_metrics(
-                "mb-ia-archiver",
+                "melba",
                 labels! {"pushgateway".to_string() => "rust".to_string()},
                 "pushgateway:9091",
                 registry.blocking_lock().gather(),

@@ -1,6 +1,6 @@
-use mb_exurl_ia_service::poller::looper::poll_db;
-use mb_exurl_ia_service::poller::utils::get_edit_data_and_note_start_id;
-use mb_exurl_ia_service::structs::internet_archive_urls::InternetArchiveUrls;
+use melba::poller::looper::poll_db;
+use melba::poller::utils::get_edit_data_and_note_start_id;
+use melba::structs::internet_archive_urls::InternetArchiveUrls;
 use sqlx::PgPool;
 
 #[sqlx::test(fixtures(

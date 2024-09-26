@@ -1,6 +1,6 @@
 services:
-  mb-ia-url-archiver:
-    container_name: mb-ia-url-archiver
+  melba:
+    container_name: melba
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
@@ -9,7 +9,7 @@ services:
       - APP_PUSH_GATEWAY=pushgateway:9091
     networks:
       - musicbrainz-docker_default
-      - default
+      - melba-docker_default
 
   prometheus:
     image: prom/prometheus
@@ -17,7 +17,7 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - default
+      - melba-docker_default
     command: --config.file=/etc/prometheus/prometheus.yaml
     volumes:
       - ../prometheus.yaml:/etc/prometheus/prometheus.yaml
@@ -31,7 +31,7 @@ services:
     ports:
       - '3000:3000'
     networks:
-      - default
+      - melba-docker_default
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
@@ -47,9 +47,9 @@ services:
     ports:
       - "9091:9091"
     networks:
-      - default
+      - melba-docker_default
 
 networks:
-  default:
+  melba-docker_default:
   musicbrainz-docker_default:
     external: true

@@ -23,9 +23,9 @@ ENV RUSTFLAGS='-C target-feature=+crt-static'
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
     cargo build --target x86_64-unknown-linux-gnu && \
-    cp ./target/x86_64-unknown-linux-gnu/debug/mb-ia /app/mb-ia
+    cp ./target/x86_64-unknown-linux-gnu/debug/melba /app/melba
 
 ENV RUN_MODE=development
 
 # Set the working directory to /app and run the binary
-CMD ["/app/mb-ia"]
+CMD ["/app/melba"]

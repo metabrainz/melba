@@ -14,7 +14,7 @@ There are 2 methods to run the program:
     - Make sure rust is installed.
     - ```shell
         cargo build &&
-        ./target/debug/mb-ia
+        ./target/debug/melba
         ```
 2. Use the Dockerfile
     - Note that the container has to run in the same network as musicbrainz db network bridge.
@@ -28,13 +28,13 @@ There are 2 methods to run the program:
 
    ![img.png](../assets/grafana_login_page.png)
 
-2. Go to Dashboard. Select `mb-ia-dashboard`.
+2. Go to Dashboard. Select `melba-dashboard`.
 
-   ![img.png](../assets/mb-ia-dashboard.png)
+   ![img.png](../assets/melba-dashboard.png)
 
 3. If the `Rust app metrics panel` shows no data, just click on the refresh icon on top right corner.
 
-   ![img.png](../assets/mb-ia-dashboard-rust-panel.png)
+   ![img.png](../assets/melba-dashboard-rust-panel.png)
 
 4. To edit, right-click on the panel and select edit option. You can edit the panel, and save the generated json in `grafana/dashboards/metrics-dashboard.json`.
 

@@ -15,6 +15,6 @@ WORKDIR /app
 COPY . .
 
 RUN cargo build --release --target x86_64-unknown-linux-gnu && \
-    cp ./target/x86_64-unknown-linux-gnu/release/mb-ia /app/mb-ia
+    cp ./target/x86_64-unknown-linux-gnu/release/melba /app/melba
 
-CMD ["/app/mb-ia"]
+CMD ["/app/melba"]

@@ -1,5 +1,5 @@
 [package]
-name = "mb-exurl-ia-service"
+name = "melba"
 version = "0.1.0"
 edition = "2021"
 
@@ -28,7 +28,7 @@ prometheus = {version = "0.13.4", features = ["push"]}
 path = "src/lib.rs"
 
 [[bin]]
-name = "mb-ia"
+name = "melba"
 path = "src/main.rs"
 
 [dev-dependencies]

@@ -62,6 +62,7 @@ pub async fn handle_payload(
                     e.to_string().as_str(),
                 )
                 .await?;
+                metrics.record_archival_status("error archival").await;
                 inc_archive_request_retry_count(pool, id).await?;
             }
         }
@@ -73,15 +74,23 @@ pub async fn handle_payload(
 pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), ArchivalError> {
     let success = make_archival_network_request(url.as_str()).await?;
     set_job_id_ia_url(pool, success.job_id.clone(), id).await?;
+    debug_println!("[LISTENER] ARCHIVAL REQUEST SUCCESSFUL: url: {},  internet_archive_url id: {} and Job Id: {}", url, id, success.job_id);
+    let metrics = Metrics::new().await;
+    metrics.record_archival_status("archival started").await;
+
     let job_id = success.job_id.clone();
     let status_pool = pool.clone();
     tokio::spawn(async move {
         let schedule_status_check_result = schedule_status_check(job_id, id, &status_pool).await;
         if let Err(e) = schedule_status_check_result {
+            let metrics = Metrics::new().await;
+            metrics
+                .record_archival_status("error archival status")
+                .await;
             inc_archive_request_retry_count(&status_pool, id)
                 .await
                 .unwrap_or_else(|e| {
-                    eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}", id);
+                    eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}, error: {}", id, e);
                     sentry::capture_error(&e);
                 });
             set_status_with_message(
@@ -92,7 +101,10 @@ pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), Archival
             )
             .await
             .unwrap_or_else(|e| {
-                eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}", id);
+                eprintln!(
+                    "[LISTENER] Could not set status for internet_archive_urls id: {}, error: {}",
+                    id, e
+                );
                 sentry::capture_error(&e);
             });
             sentry::capture_error(&e);

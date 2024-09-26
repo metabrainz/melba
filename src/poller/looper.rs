@@ -59,7 +59,6 @@ pub async fn poll_db(
                 .unwrap_or_else(|e| {
                     eprintln!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
                 });
-            debug_println!("[POLLER] Edit Data URL: {}", url);
         }
     }
     for note in &notes {
@@ -73,7 +72,6 @@ pub async fn poll_db(
                         note.id, e
                     )
                 });
-            debug_println!("[POLLER] Edit Note URL: {}", url);
         }
     }
     metrics.db_poll_counter.inc();

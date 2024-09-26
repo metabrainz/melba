@@ -126,7 +126,9 @@ pub async fn make_archival_status_request(
     let response_text = response.text().await?;
 
     if let Ok(res) = serde_json::from_str::<ArchivalStatusResponse>(&response_text) {
-        return Ok(res);
+        if res.status != "error" {
+            return Ok(res);
+        }
     }
     if let Ok(e) = serde_json::from_str::<ArchivalStatusErrorResponse>(&response_text) {
         return Err(ArchivalError::StatusRequestErrorResponse(e));
@@ -162,30 +164,29 @@ pub async fn schedule_status_check(
                 archival_status_response.status.as_str(),
             )
             .await?;
-            metrics.record_archival_status("success").await;
+            metrics.record_archival_status("success archival").await;
             debug_println!(
                 "[LISTENER] STATUS CHECK: job_id {} archived successfully",
                 job_id
             );
             return Ok(());
-        } else {
-            if attempt == 3 {
-                let status = archival_status_response.status;
-                eprintln!("[LISTENER] STATUS CHECK: Error making final status check request for job_id {}: {:?}", job_id,  &status);
-                inc_archive_request_retry_count(pool, id).await?;
-                set_status_with_message(
-                    pool,
-                    id,
-                    ArchivalStatus::StatusError as i32,
-                    status.as_str(),
-                )
-                .await?;
-            }
-            metrics.record_archival_status("error").await;
+        } else if attempt == 3 {
+            let status = archival_status_response.status;
             eprintln!(
-                "[LISTENER] STATUS CHECK: Could not archive job_id {}: {} attempt",
-                job_id, attempt
+                "[LISTENER] STATUS CHECK: 3rd Attempt, no success for job_id {}: status {:?}",
+                job_id, &status
+            );
+            inc_archive_request_retry_count(pool, id).await?;
+            set_status_with_message(
+                pool,
+                id,
+                ArchivalStatus::StatusError as i32,
+                status.as_str(),
             )
+            .await?;
+            metrics
+                .record_archival_status("status attempt exceeded")
+                .await;
         }
     }
     Ok(())

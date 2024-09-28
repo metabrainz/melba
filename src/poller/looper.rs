@@ -54,24 +54,28 @@ pub async fn poll_db(
     for edit in &edits {
         let urls = extract_url_from_edit_data(edit, pool).await;
         for url in urls {
-            save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool)
-                .await
-                .unwrap_or_else(|e| {
-                    eprintln!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
-                });
+            let save_edit_data_url_result =
+                save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool).await;
+            if let Ok(true) = save_edit_data_url_result {
+                debug_println!("[POLLER] ADDED: Edit Data {} URL {}", edit.edit, url);
+            } else if let Err(e) = save_edit_data_url_result {
+                eprintln!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
+            }
         }
     }
     for note in &notes {
         let urls = extract_url_from_edit_note(note, pool).await;
         for url in urls {
-            save_url_to_internet_archive_urls(url.as_str(), "edit_note", note.id, pool)
-                .await
-                .unwrap_or_else(|e| {
-                    eprintln!(
-                        "[POLLER] Error saving URL from edit note: {}: {}",
-                        note.id, e
-                    )
-                });
+            let save_edit_note_url_result =
+                save_url_to_internet_archive_urls(url.as_str(), "edit_note", note.id, pool).await;
+            if let Ok(true) = save_edit_note_url_result {
+                debug_println!("[POLLER] ADDED: Edit Note ID {} URL {}", note.id, url);
+            } else if let Err(e) = save_edit_note_url_result {
+                eprintln!(
+                    "[POLLER] Error saving URL from edit note: {}: {}",
+                    note.id, e
+                )
+            }
         }
     }
     metrics.db_poll_counter.inc();

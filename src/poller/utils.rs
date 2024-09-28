@@ -254,9 +254,9 @@ pub async fn save_url_to_internet_archive_urls(
     from_table: &str,
     from_table_id: i32,
     pool: &PgPool,
-) -> Result<(), Error> {
+) -> Result<bool, Error> {
     if !should_insert_url_to_internet_archive_urls(url, pool).await? {
-        return Ok(());
+        return Ok(false);
     }
     let query = r#"
                     INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
@@ -267,7 +267,7 @@ pub async fn save_url_to_internet_archive_urls(
         .bind(from_table_id)
         .execute(pool)
         .await?;
-    Ok(())
+    Ok(true)
 }
 
 /// Update the latest processed id in `last_processed_rows` table

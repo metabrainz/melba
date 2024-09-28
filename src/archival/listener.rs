@@ -22,7 +22,7 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
         while let Some(notification) = listener.try_recv().await? {
             time::sleep(Duration::from_secs(SETTINGS.listen_task.listen_interval)).await;
             debug_println!(
-                "[LISTENER] Notification Payload: {}",
+                "[LISTENER] Received payload from archive_urls channel: {}",
                 notification.payload()
             );
             let payload: InternetArchiveUrls = serde_json::from_str(notification.payload())?;
@@ -44,17 +44,21 @@ pub async fn handle_payload(
                 .status_message
                 .unwrap_or("No status message present".to_string());
             let status_ext = format!(
-                "FAILED Archival of URL {} , reason: {}",
-                url, status_message
+                "[LISTENER] ARCHIVAL FAILED after 3 retry counts: internet_archive_urls id {}, URL: {}, reason: {}",
+                id, url, status_message
             );
+            debug_println!("{}", status_ext);
             set_status_with_message(pool, id, ArchivalStatus::Failed as i32, status_ext.as_str())
                 .await?;
             sentry::capture_message(status_ext.as_str(), Error);
-            metrics.record_archival_status("failed").await;
+            metrics.record_archival_status("failed archival").await;
         } else {
             let archival_result = archive(url, url_row.id, pool).await;
             if let Err(e) = archival_result {
-                eprintln!("[LISTENER] Archival Error for id {}: {}", url_row.id, e);
+                eprintln!(
+                    "[LISTENER] ARCHIVAL ERROR: for internet_archive_urls id {}: {}",
+                    url_row.id, e
+                );
                 set_status_with_message(
                     pool,
                     id,
@@ -93,6 +97,11 @@ pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), Archival
                     eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}, error: {}", id, e);
                     sentry::capture_error(&e);
                 });
+            debug_println!(
+                "[LISTENER] STATUS CHECK ERROR: for internet_archive_urls id: {}, error: {}",
+                id,
+                e
+            );
             set_status_with_message(
                 &status_pool,
                 id,

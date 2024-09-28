@@ -82,7 +82,7 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
         Ok(_) => true,
         Err(error) => {
             debug_println!(
-                "[NOTIFIER] Cannot notify internet_archive_urls id: {}. Reason: {:?}",
+                "[NOTIFIER] No new row to notify in internet_archive_urls. Current id: {}. Reason: {:?}",
                 row_id,
                 error
             );
@@ -146,8 +146,8 @@ pub async fn schedule_status_check(
     metrics.network_request_counter.inc();
     metrics.push_metrics().await;
     debug_println!(
-        "[LISTENER] STATUS CHECK: Attempting status check for job_id {}",
-        job_id
+        "[LISTENER] STATUS CHECK: Attempting status check for internet_archive_urls id: {} and job_id {}",
+        id, job_id
     );
     set_status_with_message(pool, id, ArchivalStatus::Processing as i32, "Processing").await?;
     for attempt in 1..=3 {
@@ -166,15 +166,15 @@ pub async fn schedule_status_check(
             .await?;
             metrics.record_archival_status("success archival").await;
             debug_println!(
-                "[LISTENER] STATUS CHECK: job_id {} archived successfully",
-                job_id
+                "[LISTENER] STATUS CHECK: internet_archive_urls id: {} and job_id {} archived successfully",
+                id, job_id
             );
             return Ok(());
         } else if attempt == 3 {
             let status = archival_status_response.status;
             eprintln!(
-                "[LISTENER] STATUS CHECK: 3rd Attempt, no success for job_id {}: status {:?}",
-                job_id, &status
+                "[LISTENER] STATUS CHECK: 3rd Attempt, no success for internet_archive_urls id: {} and job_id {}: status {:?}",
+                id, job_id, &status
             );
             inc_archive_request_retry_count(pool, id).await?;
             set_status_with_message(

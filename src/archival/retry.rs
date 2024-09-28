@@ -57,7 +57,8 @@ pub async fn retry_and_cleanup_ia_row(
                 .execute(pool)
                 .await?;
                 debug_println!(
-                    "[RETRY_AND_CLEANUP] Removing failed URL: {} after {} seconds",
+                    "[RETRY_AND_CLEANUP] Removing row {} due to failed URL: {} after {} seconds",
+                    row.id,
                     row.url.unwrap_or("<unknown>".to_string()),
                     SETTINGS.retry_task.allow_remove_row_after
                 )
@@ -74,8 +75,10 @@ pub async fn retry_and_cleanup_ia_row(
                     .execute(pool)
                     .await?;
                     debug_println!(
-                        "[RETRY_AND_CLEANUP] Removing URL: {} due to Permanent Errors",
-                        row.url.unwrap_or("<unknown>".to_string())
+                        "[RETRY_AND_CLEANUP] Removing row {} containing URL: {} due to permanent error. status_ext: {}",
+                        row.id,
+                        row.url.unwrap_or("<unknown>".to_string()),
+                        status_ext
                     )
                 } else {
                     // If the archival status is null, which means the URL could not get archived earlier, therefore, enqueue the row to be sent to get archived
@@ -84,7 +87,8 @@ pub async fn retry_and_cleanup_ia_row(
                         .execute(pool)
                         .await?;
                     debug_println!(
-                        "[RETRY_AND_CLEANUP] Retrying notifying URL: {}",
+                        "[RETRY_AND_CLEANUP] Retrying notifying errored row {} containing URL: {}",
+                        row.id,
                         row.url.unwrap_or("<unknown>".to_string())
                     )
                 }
@@ -102,9 +106,12 @@ pub async fn retry_and_cleanup_ia_row(
                 .execute(pool)
                 .await?;
                 debug_println!(
-                    "[RETRY_AND_CLEANUP] Removing URL: {} after {} seconds",
+                    "[RETRY_AND_CLEANUP] Removing row {} containing URL: {} after {} seconds. Previous status: {} and status message: {}",
+                    row.id,
                     row.url.unwrap_or("<unknown>".to_string()),
-                    SETTINGS.retry_task.allow_remove_row_after
+                    SETTINGS.retry_task.allow_remove_row_after,
+                    row.status,
+                    row.status_message.unwrap_or("<unknown>".to_string())
                 )
             } else if row.status.try_into() != Ok(ArchivalStatus::Success) {
                 sqlx::query("SELECT external_url_archiver.notify_archive_urls($1)")
@@ -112,9 +119,12 @@ pub async fn retry_and_cleanup_ia_row(
                     .execute(pool)
                     .await?;
                 debug_println!(
-                    "[RETRY_AND_CLEANUP] Retrying URL: {} after {} seconds",
+                    "[RETRY_AND_CLEANUP] Retrying row {} containing URL: {} after {} seconds. Previous status: {} and status message: {}",
+                    row.id,
                     row.url.unwrap_or("<unknown>".to_string()),
-                    SETTINGS.retry_task.allow_remove_row_after
+                    SETTINGS.retry_task.allow_remove_row_after,
+                    row.status,
+                    row.status_message.unwrap_or("<unknown>".to_string())
                 )
             }
         }

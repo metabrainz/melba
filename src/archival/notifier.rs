@@ -29,7 +29,7 @@ impl Notifier {
                 .execute(&pool)
                 .await?;
             debug_println!(
-                "[NOTIFIER] start notifier from internet_archive_urls id, {}",
+                "[NOTIFIER] Adding internet_archive_urls id {} to the archive_urls channel",
                 self.start_notifier_from.unwrap()
             );
 

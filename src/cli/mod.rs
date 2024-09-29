@@ -74,7 +74,8 @@ pub async fn start(pool: &PgPool) {
         Some(Commands::CheckStatus { job_id }) => {
             match utils::get_job_id_status(job_id.as_str(), pool).await {
                 Ok(res) => {
-                    println!("Status: {}", res.status)
+                    println!("Status: {}", res.status);
+                    println!("{:?}", res)
                 }
                 Err(e) => {
                     println!("Failed: {}", e)

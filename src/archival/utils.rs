@@ -126,9 +126,15 @@ pub async fn make_archival_status_request(
     let response_text = response.text().await?;
 
     if let Ok(res) = serde_json::from_str::<ArchivalStatusResponse>(&response_text) {
-        if res.status != "error" {
-            return Ok(res);
-        }
+        return if res.status != "error" {
+            Ok(res)
+        } else {
+            let archival_status_error_response =
+                serde_json::from_str::<ArchivalStatusErrorResponse>(&response_text)?;
+            Err(ArchivalError::StatusRequestErrorResponse(
+                archival_status_error_response,
+            ))
+        };
     }
     if let Ok(e) = serde_json::from_str::<ArchivalStatusErrorResponse>(&response_text) {
         return Err(ArchivalError::StatusRequestErrorResponse(e));

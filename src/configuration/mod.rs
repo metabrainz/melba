@@ -86,22 +86,22 @@ impl Settings {
 
     pub fn init_logger(&self) {
         let mut builder = Builder::new();
-
-        if self.logs.debug {
-            builder.filter(None, LevelFilter::Debug);
-        }
-        if self.logs.info {
-            builder.filter(None, LevelFilter::Info);
+        if self.logs.error {
+            builder.filter(None, LevelFilter::Error);
         }
         if self.logs.warning {
             builder.filter(None, LevelFilter::Warn);
         }
-        if self.logs.error {
-            builder.filter(None, LevelFilter::Error);
+        if self.logs.info {
+            builder.filter(None, LevelFilter::Info);
+        }
+        if self.logs.debug {
+            builder.filter(None, LevelFilter::Debug);
         }
         if !self.logs.debug && !self.logs.info && !self.logs.warning && !self.logs.error {
             builder.filter(None, LevelFilter::Off);
         }
+
         builder.filter_module("sqlx", LevelFilter::Info);
         builder.filter_module("hyper", LevelFilter::Info);
         builder.filter_module("reqwest", LevelFilter::Info);

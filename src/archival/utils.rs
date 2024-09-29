@@ -6,9 +6,9 @@ use crate::archival::client::REQWEST_CLIENT;
 use crate::archival::error::ArchivalError;
 use crate::archival::error::ArchivalError::SaveRequestError;
 use crate::configuration::SETTINGS;
-use crate::debug_println;
 use crate::metrics::Metrics;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
+use log::{debug, info, warn};
 use sqlx::{Error, PgPool};
 use std::time::Duration;
 use tokio::time;
@@ -81,7 +81,7 @@ pub async fn is_row_exists(pool: &PgPool, row_id: i32) -> bool {
     match is_row_exists_res {
         Ok(_) => true,
         Err(error) => {
-            debug_println!(
+            debug!(
                 "[NOTIFIER] No new row to notify in internet_archive_urls. Current id: {}. Reason: {:?}",
                 row_id,
                 error
@@ -145,7 +145,7 @@ pub async fn schedule_status_check(
     let metrics = Metrics::new().await;
     metrics.network_request_counter.inc();
     metrics.push_metrics().await;
-    debug_println!(
+    info!(
         "[LISTENER] STATUS CHECK: Attempting status check for internet_archive_urls id: {} and job_id {}",
         id, job_id
     );
@@ -165,14 +165,14 @@ pub async fn schedule_status_check(
             )
             .await?;
             metrics.record_archival_status("success archival").await;
-            debug_println!(
+            info!(
                 "[LISTENER] STATUS CHECK: internet_archive_urls id: {} and job_id {} archived successfully",
                 id, job_id
             );
             return Ok(());
         } else if attempt == 3 {
             let status = archival_status_response.status;
-            eprintln!(
+            warn!(
                 "[LISTENER] STATUS CHECK: 3rd Attempt, no success for internet_archive_urls id: {} and job_id {}: status {:?}",
                 id, job_id, &status
             );

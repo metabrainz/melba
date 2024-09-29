@@ -1,8 +1,8 @@
 use crate::archival::utils::check_if_permanent_error;
 use crate::configuration::SETTINGS;
-use crate::debug_println;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
 use chrono::{Duration, Utc};
+use log::info;
 use sqlx::{Error, PgPool};
 use std::ops::Sub;
 
@@ -31,7 +31,7 @@ pub async fn start(pool: PgPool) -> Result<(), Error> {
         }
         last_id += select_limit;
     }
-    debug_println!("[RETRY_AND_CLEANUP] Task Complete");
+    info!("[RETRY_AND_CLEANUP] Task Complete");
     Ok(())
 }
 
@@ -56,10 +56,10 @@ pub async fn retry_and_cleanup_ia_row(
                 .bind(row.id)
                 .execute(pool)
                 .await?;
-                debug_println!(
+                info!(
                     "[RETRY_AND_CLEANUP] Removing row {} due to failed URL: {} after {} seconds",
                     row.id,
-                    row.url.unwrap_or("<unknown>".to_string()),
+                    row.url.unwrap_or("<null>".to_string()),
                     SETTINGS.retry_task.allow_remove_row_after
                 )
             }
@@ -74,10 +74,10 @@ pub async fn retry_and_cleanup_ia_row(
                     .bind(row.id)
                     .execute(pool)
                     .await?;
-                    debug_println!(
+                    info!(
                         "[RETRY_AND_CLEANUP] Removing row {} containing URL: {} due to permanent error. status_ext: {}",
                         row.id,
-                        row.url.unwrap_or("<unknown>".to_string()),
+                        row.url.unwrap_or("<null>".to_string()),
                         status_ext
                     )
                 } else {
@@ -86,10 +86,10 @@ pub async fn retry_and_cleanup_ia_row(
                         .bind(row.id)
                         .execute(pool)
                         .await?;
-                    debug_println!(
+                    info!(
                         "[RETRY_AND_CLEANUP] Retrying notifying errored row {} containing URL: {}",
                         row.id,
-                        row.url.unwrap_or("<unknown>".to_string())
+                        row.url.unwrap_or("<null>".to_string())
                     )
                 }
             }
@@ -105,26 +105,26 @@ pub async fn retry_and_cleanup_ia_row(
                 .bind(row.id)
                 .execute(pool)
                 .await?;
-                debug_println!(
+                info!(
                     "[RETRY_AND_CLEANUP] Removing row {} containing URL: {} after {} seconds. Previous status: {} and status message: {}",
                     row.id,
-                    row.url.unwrap_or("<unknown>".to_string()),
+                    row.url.unwrap_or("<null>".to_string()),
                     SETTINGS.retry_task.allow_remove_row_after,
                     row.status,
-                    row.status_message.unwrap_or("<unknown>".to_string())
+                    row.status_message.unwrap_or("<null>".to_string())
                 )
             } else if row.status.try_into() != Ok(ArchivalStatus::Success) {
                 sqlx::query("SELECT external_url_archiver.notify_archive_urls($1)")
                     .bind(row.id)
                     .execute(pool)
                     .await?;
-                debug_println!(
+                info!(
                     "[RETRY_AND_CLEANUP] Retrying row {} containing URL: {} after {} seconds. Previous status: {} and status message: {}",
                     row.id,
-                    row.url.unwrap_or("<unknown>".to_string()),
+                    row.url.unwrap_or("<null>".to_string()),
                     SETTINGS.retry_task.allow_remove_row_after,
                     row.status,
-                    row.status_message.unwrap_or("<unknown>".to_string())
+                    row.status_message.unwrap_or("<null>".to_string())
                 )
             }
         }

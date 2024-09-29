@@ -1,8 +1,8 @@
-use crate::debug_println;
 use crate::metrics::Metrics;
 use crate::poller::utils::{
     extract_url_from_edit_data, extract_url_from_edit_note, save_url_to_internet_archive_urls,
 };
+use log::{info, warn};
 use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool};
 
@@ -17,10 +17,9 @@ pub async fn poll_db(
     edit_data_start_idx: i32,
     edit_note_start_idx: i32,
 ) -> Result<(Option<i32>, Option<i32>), Error> {
-    debug_println!(
+    info!(
         "[POLLER] Starting Polling from EditNote: {}, EditData: {}",
-        edit_note_start_idx,
-        edit_data_start_idx
+        edit_note_start_idx, edit_data_start_idx
     );
     let metrics = Metrics::new().await;
     let edits = sqlx::query_as::<_, EditData>(
@@ -57,9 +56,9 @@ pub async fn poll_db(
             let save_edit_data_url_result =
                 save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool).await;
             if let Ok(true) = save_edit_data_url_result {
-                debug_println!("[POLLER] ADDED: Edit Data {} URL {}", edit.edit, url);
+                info!("[POLLER] ADDED: Edit Data {} URL {}", edit.edit, url);
             } else if let Err(e) = save_edit_data_url_result {
-                eprintln!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
+                warn!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
             }
         }
     }
@@ -69,9 +68,9 @@ pub async fn poll_db(
             let save_edit_note_url_result =
                 save_url_to_internet_archive_urls(url.as_str(), "edit_note", note.id, pool).await;
             if let Ok(true) = save_edit_note_url_result {
-                debug_println!("[POLLER] ADDED: Edit Note ID {} URL {}", note.id, url);
+                info!("[POLLER] ADDED: Edit Note ID {} URL {}", note.id, url);
             } else if let Err(e) = save_edit_note_url_result {
-                eprintln!(
+                warn!(
                     "[POLLER] Error saving URL from edit note: {}: {}",
                     note.id, e
                 )

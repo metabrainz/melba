@@ -1,10 +1,11 @@
-mod macros;
-
 use config::{Config, ConfigError, File};
 use dotenv::dotenv;
+use env_logger::Builder;
+use log::LevelFilter;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use std::env;
+use std::io::Write;
 
 pub static SETTINGS: Lazy<Settings> =
     Lazy::new(|| Settings::new().expect("Failed to load settings"));
@@ -52,6 +53,14 @@ pub struct Database {
     pub pg_database: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Logs {
+    pub debug: bool,
+    pub error: bool,
+    pub warning: bool,
+    pub info: bool,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub wayback_machine_api: WaybackMachineApi,
@@ -61,7 +70,7 @@ pub struct Settings {
     pub listen_task: ListenTask,
     pub sentry: Sentry,
     pub database: Database,
-    pub debug: bool,
+    pub logs: Logs,
 }
 
 impl Settings {
@@ -73,5 +82,32 @@ impl Settings {
             .add_source(File::with_name(&format!("config/{}", run_mode)).required(false))
             .build()?;
         config.try_deserialize()
+    }
+
+    pub fn init_logger(&self) {
+        let mut builder = Builder::new();
+
+        if self.logs.debug {
+            builder.filter(None, LevelFilter::Debug);
+        }
+        if self.logs.info {
+            builder.filter(None, LevelFilter::Info);
+        }
+        if self.logs.warning {
+            builder.filter(None, LevelFilter::Warn);
+        }
+        if self.logs.error {
+            builder.filter(None, LevelFilter::Error);
+        }
+        if !self.logs.debug && !self.logs.info && !self.logs.warning && !self.logs.error {
+            builder.filter(None, LevelFilter::Off);
+        }
+        builder.filter_module("sqlx", LevelFilter::Info);
+        builder.filter_module("hyper", LevelFilter::Info);
+        builder.filter_module("reqwest", LevelFilter::Info);
+        builder.filter_module("h2", LevelFilter::Info);
+
+        builder.format(|buf, record| writeln!(buf, "[{}] - {}", record.level(), record.args()));
+        builder.init();
     }
 }

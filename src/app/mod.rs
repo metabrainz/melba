@@ -2,6 +2,7 @@ use crate::archival;
 use crate::archival::notifier::Notifier;
 use crate::configuration::SETTINGS;
 use crate::poller::Poller;
+use log::{error, info};
 use sqlx::PgPool;
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,16 +21,16 @@ pub async fn start(pool: &PgPool) -> Result<(), sqlx::Error> {
     );
 
     if let Err(e) = poll_result {
-        eprintln!("Polling task failed: {:?}", e);
+        error!("Polling task failed: {:?}", e);
     }
     if let Err(e) = notify_result {
-        eprintln!("Notification task failed: {:?}", e);
+        error!("Notification task failed: {:?}", e);
     }
     if let Err(e) = listener_result {
-        eprintln!("Listener task failed: {:?}", e);
+        error!("Listener task failed: {:?}", e);
     }
     if let Err(e) = retry_and_cleanup_result {
-        eprintln!("Retry and cleanup failed: {:?}", e);
+        error!("Retry and cleanup failed: {:?}", e);
     }
 
     Ok(())
@@ -46,11 +47,8 @@ pub async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
 
     tokio::spawn(async move {
         if let Err(e) = poller.poll().await {
-            eprintln!("[POLLER] Task Failed, Error: {}", e);
-            sentry::capture_message(
-                format!("[POLLER] Task Failed, Error: {}", e).as_str(),
-                sentry::Level::Warning,
-            );
+            error!("[POLLER] Task Failed, Error: {}", e);
+            sentry::capture_error(&e);
         }
     })
 }
@@ -72,7 +70,7 @@ async fn spawn_notification_task(db_pool: PgPool) -> JoinHandle<()> {
 
             if notifier.should_notify().await {
                 if let Err(e) = notifier.notify().await {
-                    eprintln!("[NOTIFIER] Task Failed, Error: {}", e);
+                    error!("[NOTIFIER] Task Failed, Error: {}", e);
                     sentry::capture_error(&e);
                 };
             }
@@ -89,7 +87,7 @@ async fn spawn_archiver_task(db_pool: PgPool) -> JoinHandle<()> {
             .await
             .unwrap_or_else(|e| {
                 sentry::capture_error(&e);
-                eprintln!("[LISTENER] Task Failed, Error {}", e)
+                error!("[LISTENER] Task Failed, Error {}", e)
             })
     })
 }
@@ -104,6 +102,7 @@ async fn spawn_retry_and_cleanup_task(db_pool: PgPool) -> JoinHandle<()> {
         while !db_pool.is_closed() {
             interval.tick().await;
             sentry::capture_message("[RETRY_AND_CLEANUP] Task started", sentry::Level::Info);
+            info!("[RETRY_AND_CLEANUP] Task started");
             let archival_retry_task = archival::retry::start(db_pool.clone()).await;
             match archival_retry_task {
                 Ok(_) => {
@@ -114,7 +113,7 @@ async fn spawn_retry_and_cleanup_task(db_pool: PgPool) -> JoinHandle<()> {
                 }
                 Err(e) => {
                     sentry::capture_error(&e);
-                    eprintln!("[RETRY_AND_CLEANUP] Task Failed, Error: {}", e)
+                    error!("[RETRY_AND_CLEANUP] Task Failed, Error: {}", e)
                 }
             }
         }

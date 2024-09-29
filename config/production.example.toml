@@ -1,5 +1,3 @@
-debug = false
-
 [wayback_machine_api]
 myaccesskey = "wayback-machine-access-key"
 mysecret =  "wayback-machine-secret"

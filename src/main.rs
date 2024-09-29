@@ -1,4 +1,5 @@
 use crate::configuration::SETTINGS;
+use log::debug;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 
 mod app;
@@ -11,8 +12,9 @@ mod configuration;
 mod metrics;
 
 fn main() {
+    SETTINGS.init_logger();
     let _guard = if !SETTINGS.sentry.url.trim().is_empty() {
-        println!("Initializing Sentry with DSN...");
+        debug!("Initializing Sentry with DSN...");
         Some(sentry::init((
             SETTINGS.sentry.url.as_str(),
             sentry::ClientOptions {
@@ -21,7 +23,7 @@ fn main() {
             },
         )))
     } else {
-        println!("Sentry DSN is not provided, skipping Sentry initialization.");
+        debug!("Sentry DSN is not provided, skipping Sentry initialization.");
         None
     };
 

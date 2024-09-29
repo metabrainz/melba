@@ -5,9 +5,9 @@ use crate::archival::utils::{
 
 use crate::archival::error::ArchivalError;
 use crate::configuration::SETTINGS;
-use crate::debug_println;
 use crate::metrics::Metrics;
 use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
+use log::{error, info, warn};
 use sentry::Level::Error;
 use sqlx::postgres::PgListener;
 use sqlx::PgPool;
@@ -21,7 +21,7 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
     loop {
         while let Some(notification) = listener.try_recv().await? {
             time::sleep(Duration::from_secs(SETTINGS.listen_task.listen_interval)).await;
-            debug_println!(
+            info!(
                 "[LISTENER] Received payload from archive_urls channel: {}",
                 notification.payload()
             );
@@ -47,7 +47,7 @@ pub async fn handle_payload(
                 "[LISTENER] ARCHIVAL FAILED after 3 retry counts: internet_archive_urls id {}, URL: {}, reason: {}",
                 id, url, status_message
             );
-            debug_println!("{}", status_ext);
+            warn!("{}", status_ext);
             set_status_with_message(pool, id, ArchivalStatus::Failed as i32, status_ext.as_str())
                 .await?;
             sentry::capture_message(status_ext.as_str(), Error);
@@ -55,7 +55,7 @@ pub async fn handle_payload(
         } else {
             let archival_result = archive(url, url_row.id, pool).await;
             if let Err(e) = archival_result {
-                eprintln!(
+                warn!(
                     "[LISTENER] ARCHIVAL ERROR: for internet_archive_urls id {}: {}",
                     url_row.id, e
                 );
@@ -78,7 +78,7 @@ pub async fn handle_payload(
 pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), ArchivalError> {
     let success = make_archival_network_request(url.as_str()).await?;
     set_job_id_ia_url(pool, success.job_id.clone(), id).await?;
-    debug_println!("[LISTENER] ARCHIVAL REQUEST SUCCESSFUL: url: {},  internet_archive_url id: {} and Job Id: {}", url, id, success.job_id);
+    info!("[LISTENER] ARCHIVAL REQUEST SUCCESSFUL: url: {},  internet_archive_url id: {} and Job Id: {}", url, id, success.job_id);
     let metrics = Metrics::new().await;
     metrics.record_archival_status("archival started").await;
 
@@ -94,13 +94,12 @@ pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), Archival
             inc_archive_request_retry_count(&status_pool, id)
                 .await
                 .unwrap_or_else(|e| {
-                    eprintln!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}, error: {}", id, e);
+                    error!("[LISTENER] Could not increment archive request retry count for internet_archive_urls id: {}, error: {}", id, e);
                     sentry::capture_error(&e);
                 });
-            debug_println!(
+            warn!(
                 "[LISTENER] STATUS CHECK ERROR: for internet_archive_urls id: {}, error: {}",
-                id,
-                e
+                id, e
             );
             set_status_with_message(
                 &status_pool,
@@ -110,7 +109,7 @@ pub async fn archive(url: String, id: i32, pool: &PgPool) -> Result<(), Archival
             )
             .await
             .unwrap_or_else(|e| {
-                eprintln!(
+                error!(
                     "[LISTENER] Could not set status for internet_archive_urls id: {}, error: {}",
                     id, e
                 );

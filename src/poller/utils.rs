@@ -1,8 +1,11 @@
+use crate::poller::edit_types::add_relationship::AddRelationship;
+use crate::poller::edit_types::edit_relationship::EditRelationship;
+use crate::poller::edit_types::edit_url::EditUrl;
 use crate::poller::edit_types::remove_relationship::RemoveRelationship;
 use crate::structs::last_unprocessed_row::LastUnprocessedRow;
 use linkify::{LinkFinder, LinkKind};
 use mb_rs::schema::{EditData, EditNote};
-use serde_json::{json, Value};
+use serde_json::Value;
 use sqlx::types::JsonValue;
 use sqlx::{Error, PgPool};
 
@@ -90,52 +93,53 @@ fn extract_url_from_remove_relationship(json: &JsonValue) -> Option<String> {
 }
 
 fn extract_url_from_add_relationship(json: &JsonValue) -> Option<String> {
-    if json.get("type0") == Some(&json!("url")) {
-        if json.get("entity0").is_some() && json["entity0"].get("name").is_some() {
-            let mut url = json["entity0"]["name"].to_string();
-            url = url.replace(['\"', ' '], "");
-            return Some(url);
-        };
-    } else if json.get("type1") == Some(&json!("url"))
-        && json.get("entity1").is_some()
-        && json["entity1"].get("name").is_some()
-    {
-        let mut url = json["entity1"]["name"].to_string();
-        url = url.replace(['\"', ' '], "");
-        return Some(url);
-    }
-    None
-}
-
-fn extract_url_from_edit_relationship(json: &JsonValue) -> Option<String> {
-    if json.get("type0") == Some(&json!("url")) {
-        if json.get("new").is_some()
-            && json["new"].get("entity0").is_some()
-            && json["new"]["entity0"].get("name").is_some()
-        {
-            let mut url = json["new"]["entity0"]["name"].to_string();
-            url = url.replace(['\"', ' '], "");
-            return Some(url);
+    let add_relationship: Option<AddRelationship> = serde_json::from_value(json.clone()).ok();
+    if let Some(add_relationship) = add_relationship {
+        match (
+            add_relationship.type0.as_deref(),
+            add_relationship.type1.as_deref(),
+        ) {
+            (Some("url"), _) => {
+                return add_relationship.entity0.and_then(|e| e.name);
+            }
+            (_, Some("url")) => {
+                return add_relationship.entity1.and_then(|e| e.name);
+            }
+            _ => {}
         }
-    } else if json.get("type1") == Some(&json!("url"))
-        && json.get("new").is_some()
-        && json["new"].get("entity1").is_some()
-        && json["new"]["entity1"].get("name").is_some()
-    {
-        let mut url = json["new"]["entity1"]["name"].to_string();
-        url = url.replace(['\"', ' '], "");
-        return Some(url);
-    };
+    }
     None
 }
 
-fn extract_url_from_edit_url(json: &JsonValue) -> Option<String> {
-    if json.get("new").is_some() && json["new"].get("url").is_some() {
-        let mut url = json["new"]["url"].to_string();
-        url = url.replace(['\"', ' '], "");
-        return Some(url);
+fn extract_url_from_edit_relationship(json: &Value) -> Option<String> {
+    let edit_relationship: Option<EditRelationship> = serde_json::from_value(json.clone()).ok();
+    if let Some(edit_relationship) = edit_relationship {
+        match (
+            edit_relationship.type0.as_deref(),
+            edit_relationship.type1.as_deref(),
+        ) {
+            (Some("url"), _) => {
+                return edit_relationship
+                    .new
+                    .and_then(|new_field| new_field.entity1)
+                    .and_then(|entity| entity.name);
+            }
+            (_, Some("url")) => {
+                return edit_relationship
+                    .new
+                    .and_then(|new_field| new_field.entity1)
+                    .and_then(|entity| entity.name);
+            }
+            _ => {}
+        }
     }
+
     None
+}
+
+fn extract_url_from_edit_url(json: &Value) -> Option<String> {
+    let edit_url: Option<EditUrl> = serde_json::from_value(json.clone()).ok();
+    edit_url?.new?.url
 }
 
 fn extract_url_from_any_annotation(json: &JsonValue) -> Option<Vec<String>> {

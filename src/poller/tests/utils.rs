@@ -1,4 +1,5 @@
 use super::*;
+use serde_json::json;
 
 #[test]
 fn test_extract_urls_from_text() {
@@ -548,4 +549,41 @@ async fn test_update_last_unprocessed_rows(pool: PgPool) -> Result<(), Error> {
     assert_eq!(new_last_row, (111450839, 71024902));
 
     Ok(())
+}
+
+#[test]
+fn test_extract_url_from_edit_url() {
+    let json = json!({
+        "affects": 1,
+        "entity": {
+            "gid": "9af7c6df-0aa5-4ef4-8d2e-9fc50627fb2c",
+            "id": 13724363,
+            "name": "https://www.rriiccee.com/index.htm"
+        },
+        "is_merge": 1,
+        "new": {
+            "url": "https://www.rriiccee.com/"
+        },
+        "old": {
+            "url": "https://www.rriiccee.com/index.htm"
+        }
+    });
+
+    let json_with_no_url = json!({
+        "affects": 1,
+        "entity": {
+            "gid": "9af7c6df-0aa5-4ef4-8d2e-9fc50627fb2c",
+            "id": 13724363,
+            "name": "Test Entity"
+        },
+        "is_merge": 1,
+        "new": {},
+    });
+
+    assert_eq!(extract_url_from_edit_url(&json_with_no_url), None);
+
+    assert_eq!(
+        extract_url_from_edit_url(&json),
+        Some("https://www.rriiccee.com/".to_string())
+    );
 }

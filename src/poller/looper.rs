@@ -22,6 +22,24 @@ pub async fn poll_db(
         edit_note_start_idx, edit_data_start_idx
     );
     let metrics = Metrics::new().await;
+
+    // Handle Edits
+    let next_edit_id = poll_and_save_edit_data(edit_data_start_idx, pool).await?;
+
+    // Handle Edits Notes
+    let next_edit_note_id = poll_and_save_edit_note_data(edit_note_start_idx, pool).await?;
+
+    // Perf Note: use join! on the two calls
+
+    metrics.db_poll_counter.inc();
+    metrics.push_metrics().await;
+
+    // Return the next ids of the last edit and notes for the next poll
+    Ok((next_edit_id, next_edit_note_id))
+}
+
+/// Poll the edit data from the database and save it
+async fn poll_and_save_edit_data(start_id: i32, pool: &PgPool) -> Result<Option<i32>, Error> {
     let edits = sqlx::query_as::<_, EditData>(
         r#"
             SELECT DISTINCT ON (edit)
@@ -32,13 +50,43 @@ pub async fn poll_db(
             LIMIT 10;
         "#,
     )
-    .bind(edit_data_start_idx)
+    .bind(start_id)
     .fetch_all(pool)
     .await?;
 
+    // Perf Note: use a stream
+    for edit in &edits {
+        let urls = extract_url_from_edit_data(edit, pool).await;
+
+        // Perf Note: use a stream
+        for url in urls {
+            let save_edit_data_url_result =
+                save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool).await;
+
+            match save_edit_data_url_result {
+                // The url got saved
+                Ok(true) => info!("[POLLER] ADDED: Edit ID `{}` URL `{}`", edit.edit, url),
+
+                // The url didn't need to get saved
+                Ok(false) => {}
+
+                // Couldn't save the URL
+                Err(e) => warn!(
+                    "[POLLER] Error saving an URL from edit id `{}`: {}",
+                    edit.edit, e
+                ),
+            }
+        }
+    }
+
+    Ok(edits.last().map(|edit| edit.edit + 1))
+}
+
+/// Poll the edit data from the database and save it
+async fn poll_and_save_edit_note_data(start_id: i32, pool: &PgPool) -> Result<Option<i32>, Error> {
     let notes = sqlx::query_as::<_, EditNote>(
         r#"
-             SELECT DISTINCT ON (id)
+            SELECT DISTINCT ON (id)
             *
             FROM edit_note
             WHERE id >= $1
@@ -46,43 +94,34 @@ pub async fn poll_db(
             LIMIT 10;
         "#,
     )
-    .bind(edit_note_start_idx)
+    .bind(start_id)
     .fetch_all(pool)
     .await?;
 
-    for edit in &edits {
-        let urls = extract_url_from_edit_data(edit, pool).await;
-        for url in urls {
-            let save_edit_data_url_result =
-                save_url_to_internet_archive_urls(url.as_str(), "edit_data", edit.edit, pool).await;
-            if let Ok(true) = save_edit_data_url_result {
-                info!("[POLLER] ADDED: Edit Data {} URL {}", edit.edit, url);
-            } else if let Err(e) = save_edit_data_url_result {
-                warn!("[POLLER] Error saving URL from edit: {}: {}", edit.edit, e)
-            }
-        }
-    }
+    // Perf Note: use a stream
     for note in &notes {
         let urls = extract_url_from_edit_note(note, pool).await;
+
+        // Perf Note: use a stream
         for url in urls {
             let save_edit_note_url_result =
                 save_url_to_internet_archive_urls(url.as_str(), "edit_note", note.id, pool).await;
-            if let Ok(true) = save_edit_note_url_result {
-                info!("[POLLER] ADDED: Edit Note ID {} URL {}", note.id, url);
-            } else if let Err(e) = save_edit_note_url_result {
-                warn!(
-                    "[POLLER] Error saving URL from edit note: {}: {}",
+
+            match save_edit_note_url_result {
+                // The url got saved
+                Ok(true) => info!("[POLLER] ADDED: Edit Note ID `{}` URL `{}`", note.id, url),
+
+                // The url didn't need to get saved
+                Ok(false) => {}
+
+                // Couldn't save the URL
+                Err(e) => warn!(
+                    "[POLLER] Error saving an URL from edit note id `{}`: {}",
                     note.id, e
-                )
+                ),
             }
         }
     }
-    metrics.db_poll_counter.inc();
-    metrics.push_metrics().await;
 
-    // Return the next ids of the last edit and notes for the next poll
-    Ok((
-        edits.last().map(|edit| edit.edit + 1),
-        notes.last().map(|note| note.id + 1),
-    ))
+    Ok(notes.last().map(|note| note.id + 1))
 }

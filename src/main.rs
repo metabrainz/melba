@@ -5,8 +5,10 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 mod app;
 mod archival;
 mod cli;
+mod models;
 mod poller;
 mod structs;
+mod models;
 
 mod configuration;
 mod metrics;

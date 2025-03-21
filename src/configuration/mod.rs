@@ -1,5 +1,5 @@
 use config::{Config, ConfigError, File};
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use env_logger::Builder;
 use log::LevelFilter;
 use once_cell::sync::Lazy;

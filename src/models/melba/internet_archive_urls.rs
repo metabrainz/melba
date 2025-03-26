@@ -1,10 +1,8 @@
 // Generated with sql-gen
 // https://github.com/jayy-lmao/sql-gen
-use crate::structs::internet_archive_urls::ArchivalStatus::{
-    Failed, NotStarted, Processing, StatusError, Success,
-};
 use serde::Deserialize;
 use sqlx::types::chrono;
+use ArchivalStatus::{Failed, NotStarted, Processing, StatusError, Success};
 
 #[derive(sqlx::Type, Debug, Clone, PartialEq)]
 #[repr(i32)]
@@ -31,7 +29,7 @@ impl TryFrom<i32> for ArchivalStatus {
 }
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Clone)]
-pub struct InternetArchiveUrls {
+pub struct InternetArchiveUrl {
     pub id: i32,
     pub url: Option<String>,
     #[allow(dead_code)]

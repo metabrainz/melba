@@ -1,6 +1,6 @@
+use melba::models::melba::internet_archive_urls::InternetArchiveUrl;
 use melba::poller::looper::poll_db;
 use melba::poller::utils::get_edit_data_and_note_start_id;
-use melba::structs::internet_archive_urls::InternetArchiveUrls;
 use sqlx::PgPool;
 
 #[sqlx::test(fixtures(
@@ -29,7 +29,7 @@ async fn test_poller(pool: PgPool) -> Result<(), sqlx::Error> {
         SELECT *
         FROM external_url_archiver.internet_archive_urls"#
             .to_string();
-        let rows = sqlx::query_as::<_, InternetArchiveUrls>(&query)
+        let rows = sqlx::query_as::<_, InternetArchiveUrl>(&query)
             .fetch_all(&pool)
             .await?;
         let first_row = rows.first().unwrap();

@@ -2,7 +2,7 @@ use melba::archival;
 use melba::archival::error::ArchivalError;
 use melba::archival::listener::handle_payload;
 use melba::archival::notifier::Notifier;
-use melba::structs::internet_archive_urls::InternetArchiveUrls;
+use melba::models::melba::internet_archive_urls::InternetArchiveUrl;
 use sqlx::postgres::PgListener;
 use sqlx::{Error, PgPool};
 use std::sync::Arc;
@@ -68,7 +68,7 @@ async fn test_archival(pool: PgPool) -> Result<(), ArchivalError> {
             // Loop until the specified duration has elapsed
             while start_time.elapsed() < duration {
                 if let Some(notification) = listener.try_recv().await.unwrap() {
-                    let payload: InternetArchiveUrls =
+                    let payload: InternetArchiveUrl =
                         serde_json::from_str(notification.payload()).unwrap();
                     assert!(payload.url.is_some());
                     handle_payload(payload, &listener_pool).await.unwrap();
@@ -95,7 +95,7 @@ async fn test_archival(pool: PgPool) -> Result<(), ArchivalError> {
 ))]
 async fn test_cleanup_task(pool: PgPool) -> Result<(), ArchivalError> {
     archival::retry::start(pool.clone()).await.unwrap();
-    let success_urls = sqlx::query_as::<_, InternetArchiveUrls>(
+    let success_urls = sqlx::query_as::<_, InternetArchiveUrl>(
         r#"
             SELECT * FROM external_url_archiver.internet_archive_urls
             WHERE status = 3;

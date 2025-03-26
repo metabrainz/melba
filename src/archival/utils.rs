@@ -7,7 +7,8 @@ use crate::archival::error::ArchivalError;
 use crate::archival::error::ArchivalError::SaveRequestError;
 use crate::configuration::SETTINGS;
 use crate::metrics::Metrics;
-use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
+use crate::models::melba::internet_archive_urls::ArchivalStatus;
+use crate::models::melba::internet_archive_urls::InternetArchiveUrl;
 use log::{debug, info, warn};
 use sqlx::{Error, PgPool};
 use std::time::Duration;
@@ -28,7 +29,7 @@ const STATUS_ENDPOINT_URL: &str = "http://127.0.0.1:1235/status";
 /// - returns `None` if no rows are present in the table
 /// - else returns the `id` of the first unarchived row
 pub async fn get_first_id_to_start_notifier_from(pool: PgPool) -> Option<i32> {
-    let last_row_result = sqlx::query_as::<_, InternetArchiveUrls>(
+    let last_row_result = sqlx::query_as::<_, InternetArchiveUrl>(
         r#"
              SELECT DISTINCT ON (id) *
              FROM external_url_archiver.internet_archive_urls

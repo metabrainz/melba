@@ -1,6 +1,7 @@
 use crate::archival::utils::check_if_permanent_error;
 use crate::configuration::SETTINGS;
-use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
+use crate::models::melba::internet_archive_urls::ArchivalStatus;
+use crate::models::melba::internet_archive_urls::InternetArchiveUrl;
 use chrono::{Duration, Utc};
 use log::info;
 use sqlx::{Error, PgPool};
@@ -20,7 +21,7 @@ pub async fn start(pool: PgPool) -> Result<(), Error> {
         LIMIT {} "#,
             last_id, select_limit
         );
-        let rows = sqlx::query_as::<_, InternetArchiveUrls>(&query)
+        let rows = sqlx::query_as::<_, InternetArchiveUrl>(&query)
             .fetch_all(&pool)
             .await?;
         if rows.is_empty() {
@@ -36,10 +37,7 @@ pub async fn start(pool: PgPool) -> Result<(), Error> {
 }
 
 /// Given a row from `internet_archive_row, cleans it or retry archiving it
-pub async fn retry_and_cleanup_ia_row(
-    row: InternetArchiveUrls,
-    pool: &PgPool,
-) -> Result<(), Error> {
+pub async fn retry_and_cleanup_ia_row(row: InternetArchiveUrl, pool: &PgPool) -> Result<(), Error> {
     let current_time = Utc::now();
     let created_at = row.created_at.unwrap();
     let duration_since_creation = current_time.sub(created_at);

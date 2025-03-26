@@ -1,3 +1,5 @@
+use crate::models::musicbrainz_db::EditNote;
+
 use super::*;
 
 #[test]

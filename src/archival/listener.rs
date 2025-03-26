@@ -6,7 +6,8 @@ use crate::archival::utils::{
 use crate::archival::error::ArchivalError;
 use crate::configuration::SETTINGS;
 use crate::metrics::Metrics;
-use crate::structs::internet_archive_urls::{ArchivalStatus, InternetArchiveUrls};
+use crate::models::melba::internet_archive_urls::ArchivalStatus;
+use crate::models::melba::internet_archive_urls::InternetArchiveUrl;
 use log::{error, info, warn};
 use sentry::Level::Error;
 use sqlx::postgres::PgListener;
@@ -25,7 +26,7 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
                 "[LISTENER] Received payload from archive_urls channel: {}",
                 notification.payload()
             );
-            let payload: InternetArchiveUrls = serde_json::from_str(notification.payload())?;
+            let payload: InternetArchiveUrl = serde_json::from_str(notification.payload())?;
             handle_payload(payload, &pool).await?
         }
     }
@@ -33,7 +34,7 @@ pub async fn listen(pool: PgPool) -> Result<(), ArchivalError> {
 
 /// Handle what to do with the URL when we listen it from postgres channel, based on the retry count, either we try to archive, save as failed, or increment the retry count
 pub async fn handle_payload(
-    url_row: InternetArchiveUrls,
+    url_row: InternetArchiveUrl,
     pool: &PgPool,
 ) -> Result<(), ArchivalError> {
     let metrics = Metrics::new().await;

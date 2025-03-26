@@ -46,7 +46,7 @@ pub async fn spawn_poller_task(db_pool: PgPool) -> JoinHandle<()> {
         .expect("[POLLER] Could not find rows in edit rows to start poller");
 
     tokio::spawn(async move {
-        if let Err(e) = poller.poll().await {
+        if let Err(e) = poller.run().await {
             error!("[POLLER] Task Failed, Error: {}", e);
             sentry::capture_error(&e);
         }

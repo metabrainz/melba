@@ -1,4 +1,5 @@
 use config::{Config, ConfigError, File};
+use core::time::Duration;
 use dotenv::dotenv;
 use env_logger::Builder;
 use log::LevelFilter;
@@ -14,29 +15,36 @@ pub static SETTINGS: Lazy<Settings> =
 pub struct WaybackMachineApi {
     pub myaccesskey: String,
     pub mysecret: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RetryTask {
-    pub select_limit: i32,
-    pub retry_interval: u64,
-    pub allow_remove_row_after: i64,
+    pub save_endpoint_url: String,
+    pub status_endpoint_url: String,
+    pub save_rate_limit: u32,
+    pub status_rate_limit: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct PollerTask {
     pub poll_interval: u64,
 }
-
 #[derive(Debug, Deserialize)]
-pub struct NotifyTask {
-    pub notify_interval: u64,
+pub struct ArchivalTask {
+    pub job_interval: u64,
+    pub worker_count: u64,
+    pub max_retry: i64,
+    pub retry_interval: u64,
+    pub allow_remove_row_after: i64,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ListenTask {
-    pub listen_interval: u64,
-    pub sleep_status_interval: u64,
+pub struct StatusWatchTask {
+    pub job_interval: u64,
+    pub worker_count: u64,
+    pub max_retry: u64,
+    pub retry_interval: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CleanupTask {
+    pub job_interval: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,12 +72,16 @@ pub struct Logs {
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub wayback_machine_api: WaybackMachineApi,
-    pub retry_task: RetryTask,
-    pub poller_task: PollerTask,
-    pub notify_task: NotifyTask,
-    pub listen_task: ListenTask,
-    pub sentry: Sentry,
     pub database: Database,
+
+    // Task settings
+    pub poller_task: PollerTask,
+    pub archival_task: ArchivalTask,
+    pub status_watch_task: StatusWatchTask,
+    pub cleaner_task: CleanupTask,
+
+    // Log settings
+    pub sentry: Sentry,
     pub logs: Logs,
 }
 
@@ -79,8 +91,12 @@ impl Settings {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
         let config = Config::builder()
             .add_source(File::with_name("config/default"))
-            .add_source(File::with_name(&format!("config/{}", run_mode)).required(false))
-            .build()?;
+            .add_source(File::with_name(&format!("config/{}", run_mode)).required(false));
+
+        #[cfg(test)]
+        let config = config.add_source(File::with_name("config/testing").required(false));
+
+        let config = config.build()?;
         config.try_deserialize()
     }
 
@@ -109,5 +125,27 @@ impl Settings {
 
         builder.format(|buf, record| writeln!(buf, "[{}] - {}", record.level(), record.args()));
         builder.init();
+    }
+}
+
+impl ArchivalTask {
+    pub fn get_job_interval(&self) -> Duration {
+        Duration::new(self.job_interval, 0)
+    }
+
+    pub fn get_retry_interval(&self) -> Duration {
+        Duration::new(SETTINGS.archival_task.retry_interval, 0)
+    }
+}
+
+impl StatusWatchTask {
+    pub fn get_job_interval(&self) -> Duration {
+        Duration::new(self.job_interval, 0)
+    }
+}
+
+impl CleanupTask {
+    pub fn get_job_interval(&self) -> Duration {
+        Duration::new(self.job_interval * 60, 0)
     }
 }

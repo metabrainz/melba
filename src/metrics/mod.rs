@@ -5,7 +5,9 @@ use tokio::task::spawn_blocking;
 
 pub struct Metrics {
     pub db_poll_counter: Counter,
+    #[expect(dead_code)]
     pub network_request_counter: Counter,
+    #[expect(dead_code)]
     pub archival_status_counter: CounterVec, // New counter for archival statuses
     pub registry: Arc<Mutex<Registry>>,
 }
@@ -71,6 +73,7 @@ impl Metrics {
         .unwrap();
     }
 
+    #[expect(dead_code)]
     pub async fn record_archival_status(&self, status: &str) {
         self.archival_status_counter
             .with_label_values(&[status])

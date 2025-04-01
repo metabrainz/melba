@@ -1,7 +1,8 @@
+use crate::models::melba::last_unprocessed_row::LastUnprocessedRow;
+use crate::models::musicbrainz_db::EditData;
+use crate::models::musicbrainz_db::EditNote;
 use crate::poller::edit_types::remove_relationship::RemoveRelationship;
-use crate::structs::last_unprocessed_row::LastUnprocessedRow;
 use linkify::{LinkFinder, LinkKind};
-use mb_rs::schema::{EditData, EditNote};
 use serde_json::{json, Value};
 use sqlx::types::JsonValue;
 use sqlx::{Error, PgPool};
@@ -26,6 +27,7 @@ pub async fn extract_url_from_edit_note(note: &EditNote, pool: &PgPool) -> Vec<S
 /// and returns the vector of (URL as String)
 pub async fn extract_url_from_edit_data(edit: &EditData, pool: &PgPool) -> Vec<String> {
     let json: &Value = &edit.data;
+
     get_edit_type_if_editor_is_not_spammer(edit.edit, pool)
         .await
         .map(|edit_type| extract_urls_from_json(json, edit_type))
@@ -37,11 +39,10 @@ pub fn extract_urls_from_text(text: &str) -> Vec<String> {
     let mut finder = LinkFinder::new();
     finder.kinds(&[LinkKind::Url]);
 
-    let urls: Vec<_> = finder
+    finder
         .links(text)
         .map(|link| link.as_str().to_string())
-        .collect();
-    urls
+        .collect()
 }
 
 /// This function get the urls contained in the input edit data.
@@ -209,6 +210,7 @@ pub async fn should_insert_url_to_internet_archive_urls(
     if should_exclude_url(url) {
         return Ok(false);
     }
+
     match is_url_exists(url, pool).await {
         Ok(exists) => Ok(!exists), // If the URL exists, return false; otherwise, return true.
         Err(_) => Ok(true),        // On error, default to true
@@ -246,9 +248,12 @@ pub fn should_exclude_url(url: &str) -> bool {
         "https://metabrainz.org",
         "web.archive.org",
     ];
+
     keywords.iter().any(|keyword| url.contains(keyword))
 }
 
+/// Save the url to the `internet_archive_urls` table. Returns `Ok(true)` if the url has been sucessfully inserted.
+/// Return `Ok(false)` if the url shouldn't be inserted
 pub async fn save_url_to_internet_archive_urls(
     url: &str,
     from_table: &str,
@@ -258,15 +263,18 @@ pub async fn save_url_to_internet_archive_urls(
     if !should_insert_url_to_internet_archive_urls(url, pool).await? {
         return Ok(false);
     }
+
     let query = r#"
                     INSERT INTO external_url_archiver.internet_archive_urls (url, from_table, from_table_id, retry_count)
                     VALUES ($1, $2, $3, 0)"#;
+
     sqlx::query(query)
         .bind(url)
         .bind(from_table)
         .bind(from_table_id)
         .execute(pool)
         .await?;
+
     Ok(true)
 }
 
@@ -282,11 +290,13 @@ pub async fn update_last_unprocessed_rows(
         id_column = $1
         WHERE table_name = $2
     "#;
+
     sqlx::query(query)
         .bind(table_id)
         .bind(from_table)
         .execute(pool)
         .await?;
+
     Ok(())
 }
 

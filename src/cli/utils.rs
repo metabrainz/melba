@@ -1,10 +1,11 @@
+use crate::api::internet_archive::archiving_job_status;
 use crate::archival::archival_response::ArchivalStatusResponse;
 use crate::archival::error::ArchivalError;
-use crate::archival::utils::make_archival_status_request;
+use crate::models::musicbrainz_db::EditData;
+use crate::models::musicbrainz_db::EditNote;
 use crate::poller;
 use crate::poller::utils::should_insert_url_to_internet_archive_urls;
 use colorize::AnsiColor;
-use mb_rs::schema::{EditData, EditNote};
 use sqlx::{Error, PgPool, Row};
 
 //TODO: Currently I am returning the internet_archive_urls row id when I insert any URL. Now there might be URLs which are already saved, hence instead of row id, show how many URLs are still there unprocessed, and is before the currently inserted one.
@@ -107,6 +108,6 @@ pub async fn get_job_id_status(
     job_id: &str,
     _pool: &PgPool,
 ) -> Result<ArchivalStatusResponse, ArchivalError> {
-    let status = make_archival_status_request(job_id).await?;
+    let status = archiving_job_status(job_id).await?;
     Ok(status)
 }

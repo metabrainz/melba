@@ -12,12 +12,15 @@ pub enum ArchivalError {
     #[error("sqlx error: {0}")]
     SqlxError(#[from] sqlx::Error),
 
-    #[error("archival error: {0:?}")]
-    SaveRequestError(ArchivalErrorResponse),
-
     #[error("archival status error {0:?}")]
     StatusRequestErrorResponse(ArchivalStatusErrorResponse),
 
     #[error("HTML Response: {0}")]
     HtmlResponse(String),
+
+    #[error("Wayback Machine returned an error:\n{0:?}")]
+    WaybackMachineErr(ArchivalErrorResponse),
+
+    #[error("Wayback Machine returned an error:\n{0}")]
+    WaybackMachineErrStr(String),
 }

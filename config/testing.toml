@@ -1,0 +1,8 @@
+# This config is meant to be used while doing `cargo test`. 
+# If you need to run the app in development mode, use "development.toml", or create it from the example
+
+# This naturally inherit from the "development.toml" file.
+
+[wayback_machine_api] # Use a mock server instead
+save_endpoint_url = "http://127.0.0.1:1234/save"
+status_endpoint_url =  "http://127.0.0.1:1235/status"
